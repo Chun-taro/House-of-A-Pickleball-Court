@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Trophy, Calendar, Sparkles, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star } from 'lucide-react';
+import { Trophy, Calendar, Sparkles, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star, Volume2, ShieldAlert, Wifi, CloudRain, Gamepad2, FileText } from 'lucide-react';
 import CourtAvailabilityCalendar from '../components/CourtAvailabilityCalendar';
 
 import logoImg from '../images/Logo.jpg';
@@ -161,7 +161,117 @@ export default function Home() {
           <p className="text-sm text-slate-600 leading-relaxed">Reserve cash or GCash online, get your digital booking code, and bring your paddles to play!</p>
         </div>
       </section>
+
+      {/* Rules & Guidelines Section */}
+      <section className="glass-card p-8 sm:p-10 rounded-3xl space-y-8 shadow-xl border border-slate-200">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider border border-emerald-200">
+              <FileText className="w-3.5 h-3.5" /> Policy & Guidelines
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Pickleball Court Rules & Guidelines
+            </h2>
+          </div>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Please read our court guidelines to ensure a pleasant and enjoyable experience for all players and neighbors.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Rule 1: Speaker Use */}
+          <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3 hover:border-emerald-300 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 font-bold">
+              <Volume2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">1</span>
+              Speaker Use
+            </h3>
+            <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside leading-relaxed">
+              <li>Speakers may only be used from <strong className="text-slate-800 font-bold">10:00 AM to 9:00 PM</strong>.</li>
+              <li>Please keep the volume at a reasonable level to avoid disturbing our neighbors.</li>
+            </ul>
+          </div>
+
+          {/* Rule 2: Payments */}
+          <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3 hover:border-amber-300 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 font-bold">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-black">2</span>
+              Payments
+            </h3>
+            <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside leading-relaxed">
+              <li>All payments are <strong className="text-slate-800 font-bold">non-refundable</strong>, except in cases stated under the weather policy.</li>
+            </ul>
+          </div>
+
+          {/* Rule 3: Amenities */}
+          <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3 hover:border-teal-300 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 font-bold">
+              <Wifi className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-black">3</span>
+              Amenities
+            </h3>
+            <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside leading-relaxed">
+              <li><strong className="text-slate-800 font-bold">Free Wi-Fi</strong> is available for all guests.</li>
+              <li>Food, snacks, and bottled water are available for purchase on site.</li>
+            </ul>
+          </div>
+
+          {/* Rule 4: Weather Policy */}
+          <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3 md:col-span-2 lg:col-span-2 hover:border-blue-300 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 font-bold">
+              <CloudRain className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-black">4</span>
+              Weather Policy
+            </h3>
+            <ul className="text-xs text-slate-600 space-y-2 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <span>During heavy rain accompanied by strong winds, some rainwater may enter the court.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <span>You may continue playing while our staff immediately wipes and dries the court.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-500 font-bold">•</span>
+                <div>
+                  <span>If your game is interrupted by rain, you may:</span>
+                  <ul className="pl-4 pt-1 space-y-1 list-circle">
+                    <li><strong className="text-slate-800 font-bold">Extend your playing time at no additional cost</strong> for the duration of the interruption, <em>provided there is no booking after your schedule</em>; or</li>
+                    <li><strong className="text-slate-800 font-bold">Receive a refund</strong> if an extension is not possible.</li>
+                  </ul>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          {/* Rule 5: Board Games */}
+          <div className="p-6 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3 hover:border-indigo-300 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 font-bold">
+              <Gamepad2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-black">5</span>
+              Board Games
+            </h3>
+            <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside leading-relaxed">
+              <li>Board games are available for guests to enjoy while waiting for their court reservation.</li>
+              <li>Children are also welcome to play the board games while waiting.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
+
 
