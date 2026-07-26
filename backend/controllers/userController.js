@@ -54,10 +54,21 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { name, email, phone, role, password } = req.body;
+
+    // Strict security: Only Admin users can change user roles
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only Super Admin can change user roles.' });
+    }
+
     const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Prevent admin from accidently removing their own admin status
+    if (String(req.params.id) === String(req.user._id) && role && role !== 'admin') {
+      return res.status(400).json({ success: false, message: 'You cannot remove your own Admin role privileges.' });
     }
 
     if (name) user.name = name;
