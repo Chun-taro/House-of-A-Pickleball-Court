@@ -200,7 +200,16 @@ export default function Register() {
                 placeholder="123456"
                 className="w-full text-center tracking-[0.5em] text-2xl font-black py-3 rounded-2xl border-2 border-emerald-600/50 bg-slate-50 focus:border-emerald-600 outline-none transition-all"
               />
-              <p className="text-[11px] text-slate-600 text-center">Check your Inbox / Spam folder for the email code.</p>
+              <p className="text-[11px] text-slate-600 text-center">Enter the code sent to your registered Gmail address.</p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs leading-relaxed space-y-1">
+              <p className="font-extrabold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" /> Can't find the code in your Inbox?
+              </p>
+              <p className="text-[11px] text-slate-700">
+                Please check your <strong>Spam / Junk</strong> or <strong>Promotions</strong> folder if the email is not in your primary inbox.
+              </p>
             </div>
 
             <button

@@ -176,6 +176,15 @@ export default function Login() {
               />
             </div>
 
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs leading-relaxed space-y-1">
+              <p className="font-extrabold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" /> Can't find the code in your Inbox?
+              </p>
+              <p className="text-[11px] text-slate-700">
+                Please check your <strong>Spam / Junk</strong> or <strong>Promotions</strong> folder if the email is not in your primary inbox.
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={loading || otpCode.length !== 6}
