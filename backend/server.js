@@ -3,7 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
-import db, { initDB } from './config/db.js';
+import connectDB from './config/db.js';
 
 import authRoutes from './routes/authRoutes.js';
 import facilityRoutes from './routes/facilityRoutes.js';
@@ -13,8 +13,8 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
-// Initialize SQLite Database & Tables
-initDB();
+// Connect to MongoDB Atlas Database
+connectDB();
 
 const app = express();
 
@@ -25,7 +25,7 @@ app.use(cors()); // Allow all local dev origins
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: "House of A's Express SQLite API Server is Running!" });
+  res.json({ success: true, message: "House of A's Express MongoDB Atlas API Server is Running!" });
 });
 
 // API Routes

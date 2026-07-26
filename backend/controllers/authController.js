@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import db from '../config/db.js';
+import User from '../models/User.js';
 import { sendWelcomeEmail, sendVerificationCodeEmail } from '../utils/mailer.js';
 
 const generateToken = (id) => {
@@ -19,34 +18,35 @@ export const register = async (req, res) => {
     }
 
     const lowerEmail = email.toLowerCase();
-    const existing = db.prepare('SELECT id, is_verified FROM users WHERE email = ?').get(lowerEmail);
+    const existing = await User.findOne({ email: lowerEmail });
 
     if (existing && existing.is_verified) {
       return res.status(400).json({ success: false, message: 'Email address is already registered and verified.' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     // Generate 6-digit random verification code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins expiry
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
 
-    let userId;
+    let user;
     if (existing && !existing.is_verified) {
-      // Update existing unverified account with new credentials and code
-      db.prepare(`
-        UPDATE users SET name = ?, password = ?, phone = ?, verification_code = ?, verification_expires_at = ?
-        WHERE id = ?
-      `).run(name, hashedPassword, phone || '', otpCode, expiresAt, existing.id);
-      userId = existing.id;
+      existing.name = name;
+      existing.password = password;
+      existing.phone = phone || '';
+      existing.verification_code = otpCode;
+      existing.verification_expires_at = expiresAt;
+      user = await existing.save();
     } else {
-      // Create new user account
-      const info = db.prepare(`
-        INSERT INTO users (name, email, password, phone, role, is_verified, verification_code, verification_expires_at)
-        VALUES (?, ?, ?, ?, 'customer', 0, ?, ?)
-      `).run(name, lowerEmail, hashedPassword, phone || '', otpCode, expiresAt);
-      userId = Number(info.lastInsertRowid);
+      user = await User.create({
+        name,
+        email: lowerEmail,
+        password,
+        phone: phone || '',
+        role: 'customer',
+        is_verified: false,
+        verification_code: otpCode,
+        verification_expires_at: expiresAt,
+      });
     }
 
     // Send 6-digit verification code email
@@ -74,19 +74,19 @@ export const verifyOTP = async (req, res) => {
     }
 
     const lowerEmail = email.toLowerCase();
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(lowerEmail);
+    const user = await User.findOne({ email: lowerEmail });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
     }
 
     if (user.is_verified) {
-      const token = generateToken(user.id);
+      const token = generateToken(user._id);
       return res.json({
         success: true,
         message: 'Account is already verified.',
         token,
-        user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role },
+        user: { id: user._id, _id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
       });
     }
 
@@ -101,14 +101,15 @@ export const verifyOTP = async (req, res) => {
     }
 
     // Mark user as verified
-    db.prepare(`
-      UPDATE users SET is_verified = 1, verification_code = NULL, verification_expires_at = NULL WHERE id = ?
-    `).run(user.id);
+    user.is_verified = true;
+    user.verification_code = null;
+    user.verification_expires_at = null;
+    await user.save();
 
-    const token = generateToken(user.id);
+    const token = generateToken(user._id);
 
     // Send Welcome Email asynchronously
-    sendWelcomeEmail({ id: user.id, name: user.name, email: user.email })
+    sendWelcomeEmail({ id: user._id, name: user.name, email: user.email })
       .catch((err) => console.error('Welcome Mailer error:', err));
 
     return res.json({
@@ -116,7 +117,8 @@ export const verifyOTP = async (req, res) => {
       message: 'Account verified successfully!',
       token,
       user: {
-        id: user.id,
+        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
@@ -138,7 +140,7 @@ export const resendOTP = async (req, res) => {
     }
 
     const lowerEmail = email.toLowerCase();
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(lowerEmail);
+    const user = await User.findOne({ email: lowerEmail });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
@@ -150,11 +152,11 @@ export const resendOTP = async (req, res) => {
 
     // Generate new OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    db.prepare(`
-      UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?
-    `).run(otpCode, expiresAt, user.id);
+    user.verification_code = otpCode;
+    user.verification_expires_at = expiresAt;
+    await user.save();
 
     // Send new verification email
     sendVerificationCodeEmail({ name: user.name, email: lowerEmail, code: otpCode })
@@ -178,16 +180,18 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide both email and password.' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase());
+    const user = await User.findOne({ email: email.toLowerCase() });
 
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (user && (await user.comparePassword(password))) {
       // Check if user is verified
-      if (user.is_verified === 0) {
+      if (!user.is_verified) {
         // Send a fresh OTP code
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        db.prepare('UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?').run(otpCode, expiresAt, user.id);
-        
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        user.verification_code = otpCode;
+        user.verification_expires_at = expiresAt;
+        await user.save();
+
         sendVerificationCodeEmail({ name: user.name, email: user.email, code: otpCode }).catch(err => console.error(err));
 
         return res.status(403).json({
@@ -198,13 +202,14 @@ export const login = async (req, res) => {
         });
       }
 
-      const token = generateToken(user.id);
+      const token = generateToken(user._id);
       return res.json({
         success: true,
         message: 'Logged in successfully.',
         token,
         user: {
-          id: user.id,
+          id: user._id,
+          _id: user._id,
           name: user.name,
           email: user.email,
           phone: user.phone,
@@ -219,9 +224,9 @@ export const login = async (req, res) => {
   }
 };
 
-export const getProfile = (req, res) => {
+export const getProfile = async (req, res) => {
   try {
-    const user = db.prepare('SELECT id, name, email, phone, role, is_verified FROM users WHERE id = ?').get(req.user.id);
+    const user = await User.findById(req.user._id).select('-password');
     return res.json({ success: true, user });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -232,27 +237,28 @@ export const updateProfile = async (req, res) => {
   try {
     const { name, phone, password } = req.body;
 
-    let sql = 'UPDATE users SET name = ?, phone = ?';
-    const params = [name || req.user.name, phone !== undefined ? phone : req.user.phone];
-
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      sql += ', password = ?';
-      params.push(hashedPassword);
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    sql += ' WHERE id = ?';
-    params.push(req.user.id);
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (password) user.password = password;
 
-    db.prepare(sql).run(...params);
-
-    const updatedUser = db.prepare('SELECT id, name, email, phone, role FROM users WHERE id = ?').get(req.user.id);
+    await user.save();
 
     return res.json({
       success: true,
       message: 'Profile updated successfully.',
-      user: updatedUser,
+      user: {
+        id: user._id,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

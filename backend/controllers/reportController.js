@@ -1,34 +1,38 @@
-import db from '../config/db.js';
+import Booking from '../models/Booking.js';
+import Payment from '../models/Payment.js';
+import Facility from '../models/Facility.js';
+import User from '../models/User.js';
 
 // Get Admin Dashboard Overview Metrics
-export const getDashboardStats = (req, res) => {
+export const getDashboardStats = async (req, res) => {
   try {
-    const totalBookings = db.prepare('SELECT COUNT(*) as count FROM bookings').get().count;
-    const pendingBookings = db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'").get().count;
-    const approvedBookings = db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'approved'").get().count;
-    const completedBookings = db.prepare("SELECT COUNT(*) as count FROM bookings WHERE status = 'completed'").get().count;
-    const activeFacilities = db.prepare('SELECT COUNT(*) as count FROM facilities WHERE is_active = 1').get().count;
-    const totalCustomers = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'customer'").get().count;
+    const totalBookings = await Booking.countDocuments({});
+    const pendingBookings = await Booking.countDocuments({ status: 'pending' });
+    const approvedBookings = await Booking.countDocuments({ status: 'approved' });
+    const completedBookings = await Booking.countDocuments({ status: 'completed' });
+    const activeFacilities = await Facility.countDocuments({ is_active: true });
+    const totalCustomers = await User.countDocuments({ role: 'customer' });
 
-    const revRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE payment_status = 'paid'").get();
-    const totalRevenue = revRow?.total || 0;
+    const revResult = await Payment.aggregate([
+      { $match: { payment_status: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]);
+    const totalRevenue = revResult.length > 0 ? revResult[0].total : 0;
 
-    const recentBookingsRaw = db.prepare(`
-      SELECT b.*, u.name as user_name, u.email as user_email,
-             f.name as facility_name, c.name as court_name
-      FROM bookings b
-      LEFT JOIN users u ON b.user_id = u.id
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      ORDER BY b.id DESC LIMIT 5
-    `).all();
+    const recentBookingsRaw = await Booking.find({})
+      .populate('user_id', 'name email')
+      .populate('facility_id', 'name')
+      .populate('court_id', 'name')
+      .sort({ createdAt: -1 })
+      .limit(5);
 
     const recentBookings = recentBookingsRaw.map((b) => ({
-      ...b,
-      _id: b.id,
-      user_id: { name: b.user_name, email: b.user_email },
-      facility_id: { name: b.facility_name },
-      court_id: { name: b.court_name },
+      ...b.toObject(),
+      id: b._id,
+      _id: b._id,
+      user_id: b.user_id ? { name: b.user_id.name, email: b.user_id.email } : { name: 'Walk-in Guest', email: '' },
+      facility_id: b.facility_id ? { name: b.facility_id.name } : null,
+      court_id: b.court_id ? { name: b.court_id.name } : null,
     }));
 
     return res.json({
@@ -50,20 +54,19 @@ export const getDashboardStats = (req, res) => {
 };
 
 // Get Full Analytics Report Data
-export const getReportData = (req, res) => {
+export const getReportData = async (req, res) => {
   try {
-    const bookingsRaw = db.prepare(`
-      SELECT b.*, u.name as user_name, u.email as user_email,
-             f.name as facility_name, c.name as court_name
-      FROM bookings b
-      LEFT JOIN users u ON b.user_id = u.id
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      ORDER BY b.id DESC
-    `).all();
+    const bookingsRaw = await Booking.find({})
+      .populate('user_id', 'name email')
+      .populate('facility_id', 'name')
+      .populate('court_id', 'name')
+      .sort({ createdAt: -1 });
 
-    const revRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE payment_status = 'paid'").get();
-    const totalRevenue = revRow?.total || 0;
+    const revResult = await Payment.aggregate([
+      { $match: { payment_status: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]);
+    const totalRevenue = revResult.length > 0 ? revResult[0].total : 0;
 
     const statusCounts = {
       pending: 0,
@@ -81,11 +84,12 @@ export const getReportData = (req, res) => {
     });
 
     const bookings = bookingsRaw.map((b) => ({
-      ...b,
-      _id: b.id,
-      user_id: { name: b.user_name, email: b.user_email },
-      facility_id: { name: b.facility_name },
-      court_id: { name: b.court_name },
+      ...b.toObject(),
+      id: b._id,
+      _id: b._id,
+      user_id: b.user_id ? { name: b.user_id.name, email: b.user_id.email } : { name: 'Walk-in Guest', email: '' },
+      facility_id: b.facility_id ? { name: b.facility_id.name } : null,
+      court_id: b.court_id ? { name: b.court_id.name } : null,
     }));
 
     return res.json({
@@ -101,26 +105,22 @@ export const getReportData = (req, res) => {
 };
 
 // Export CSV Report
-export const exportReportCsv = (req, res) => {
+export const exportReportCsv = async (req, res) => {
   try {
-    const bookings = db.prepare(`
-      SELECT b.*, u.name as user_name, u.email as user_email,
-             f.name as facility_name, c.name as court_name
-      FROM bookings b
-      LEFT JOIN users u ON b.user_id = u.id
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      ORDER BY b.id DESC
-    `).all();
+    const bookings = await Booking.find({})
+      .populate('user_id', 'name email')
+      .populate('facility_id', 'name')
+      .populate('court_id', 'name')
+      .sort({ createdAt: -1 });
 
     let csvContent = 'Booking Code,Customer,Email,Facility,Court,Date,Start Time,End Time,Total Amount,Status\n';
 
     bookings.forEach((b) => {
       const code = b.booking_code || '';
-      const customer = b.user_name ? `"${b.user_name}"` : 'Guest';
-      const email = b.user_email || '';
-      const facility = b.facility_name ? `"${b.facility_name}"` : '';
-      const court = b.court_name ? `"${b.court_name}"` : '';
+      const customer = b.user_id?.name ? `"${b.user_id.name}"` : 'Guest';
+      const email = b.user_id?.email || '';
+      const facility = b.facility_id?.name ? `"${b.facility_id.name}"` : '';
+      const court = b.court_id?.name ? `"${b.court_id.name}"` : '';
       const date = b.booking_date || '';
       const start = b.start_time || '';
       const end = b.end_time || '';

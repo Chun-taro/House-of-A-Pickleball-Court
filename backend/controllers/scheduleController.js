@@ -1,25 +1,28 @@
-import db from '../config/db.js';
+import Facility from '../models/Facility.js';
+import OperatingHour from '../models/OperatingHour.js';
+import Holiday from '../models/Holiday.js';
 
 // Get Operating Hours & Holidays for Admin / Staff
-export const getSchedules = (req, res) => {
+export const getSchedules = async (req, res) => {
   try {
-    const facilitiesList = db.prepare('SELECT * FROM facilities').all();
-    const facilities = facilitiesList.map(f => ({ ...f, _id: f.id }));
+    const facilitiesList = await Facility.find({});
+    const facilities = facilitiesList.map(f => ({ ...f.toObject(), id: f._id, _id: f._id }));
 
-    const opList = db.prepare(`
-      SELECT oh.*, f.name as facility_name
-      FROM operating_hours oh
-      LEFT JOIN facilities f ON oh.facility_id = f.id
-    `).all();
-    const operatingHours = opList.map(oh => ({ ...oh, _id: oh.id, facility_id: { _id: oh.facility_id, name: oh.facility_name } }));
+    const opList = await OperatingHour.find({}).populate('facility_id', 'name');
+    const operatingHours = opList.map(oh => ({
+      ...oh.toObject(),
+      id: oh._id,
+      _id: oh._id,
+      facility_id: oh.facility_id ? { _id: oh.facility_id._id, name: oh.facility_id.name } : null
+    }));
 
-    const holList = db.prepare(`
-      SELECT h.*, f.name as facility_name
-      FROM holidays h
-      LEFT JOIN facilities f ON h.facility_id = f.id
-      ORDER BY h.holiday_date ASC
-    `).all();
-    const holidays = holList.map(h => ({ ...h, _id: h.id, facility_id: h.facility_id ? { _id: h.facility_id, name: h.facility_name } : null }));
+    const holList = await Holiday.find({}).populate('facility_id', 'name').sort({ holiday_date: 1 });
+    const holidays = holList.map(h => ({
+      ...h.toObject(),
+      id: h._id,
+      _id: h._id,
+      facility_id: h.facility_id ? { _id: h.facility_id._id, name: h.facility_id.name } : null
+    }));
 
     return res.json({
       success: true,
@@ -33,7 +36,7 @@ export const getSchedules = (req, res) => {
 };
 
 // Update Operating Hours for a Facility
-export const updateOperatingHours = (req, res) => {
+export const updateOperatingHours = async (req, res) => {
   try {
     const { facility_id, hours } = req.body;
 
@@ -42,23 +45,17 @@ export const updateOperatingHours = (req, res) => {
     }
 
     for (const item of hours) {
-      const existing = db.prepare('SELECT id FROM operating_hours WHERE facility_id = ? AND day_of_week = ?').get(facility_id, item.day_of_week);
-      if (existing) {
-        db.prepare('UPDATE operating_hours SET open_time = ?, close_time = ?, is_closed = ? WHERE id = ?').run(
-          item.open_time || '06:00',
-          item.close_time || '22:00',
-          item.is_closed ? 1 : 0,
-          existing.id
-        );
-      } else {
-        db.prepare('INSERT INTO operating_hours (facility_id, day_of_week, open_time, close_time, is_closed) VALUES (?, ?, ?, ?, ?)').run(
+      await OperatingHour.findOneAndUpdate(
+        { facility_id, day_of_week: item.day_of_week },
+        {
           facility_id,
-          item.day_of_week,
-          item.open_time || '06:00',
-          item.close_time || '22:00',
-          item.is_closed ? 1 : 0
-        );
-      }
+          day_of_week: item.day_of_week,
+          open_time: item.open_time || '06:00',
+          close_time: item.close_time || '22:00',
+          is_closed: !!item.is_closed,
+        },
+        { upsert: true, new: true }
+      );
     }
 
     return res.json({ success: true, message: 'Operating hours updated successfully.' });
@@ -68,7 +65,7 @@ export const updateOperatingHours = (req, res) => {
 };
 
 // Create Holiday
-export const createHoliday = (req, res) => {
+export const createHoliday = async (req, res) => {
   try {
     const { facility_id, name, holiday_date, is_recurring } = req.body;
 
@@ -76,22 +73,25 @@ export const createHoliday = (req, res) => {
       return res.status(400).json({ success: false, message: 'Holiday name and date are required.' });
     }
 
-    const info = db.prepare(
-      'INSERT INTO holidays (facility_id, name, holiday_date, is_recurring) VALUES (?, ?, ?, ?)'
-    ).run(facility_id || null, name, holiday_date, is_recurring ? 1 : 0);
+    const holiday = await Holiday.create({
+      facility_id: facility_id || null,
+      name,
+      holiday_date,
+      is_recurring: !!is_recurring,
+    });
 
-    const holiday = db.prepare('SELECT * FROM holidays WHERE id = ?').get(info.lastInsertRowid);
+    const mapped = { ...holiday.toObject(), id: holiday._id, _id: holiday._id };
 
-    return res.status(201).json({ success: true, message: 'Holiday added successfully.', holiday: { ...holiday, _id: holiday.id } });
+    return res.status(201).json({ success: true, message: 'Holiday added successfully.', holiday: mapped });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // Delete Holiday
-export const deleteHoliday = (req, res) => {
+export const deleteHoliday = async (req, res) => {
   try {
-    db.prepare('DELETE FROM holidays WHERE id = ?').run(req.params.id);
+    await Holiday.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'Holiday deleted successfully.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

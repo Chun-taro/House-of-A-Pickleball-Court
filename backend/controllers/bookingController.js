@@ -1,4 +1,10 @@
-import db from '../config/db.js';
+import Booking from '../models/Booking.js';
+import Payment from '../models/Payment.js';
+import Facility from '../models/Facility.js';
+import Court from '../models/Court.js';
+import OperatingHour from '../models/OperatingHour.js';
+import Holiday from '../models/Holiday.js';
+import User from '../models/User.js';
 import { sendBookingConfirmationEmail, sendPaymentReceiptEmail } from '../utils/mailer.js';
 
 // Helper to convert "HH:MM" string to total minutes from midnight
@@ -11,7 +17,7 @@ const timeToMinutes = (timeStr) => {
 };
 
 // Check date/court availability and return time slots based on chosen duration_hours
-export const checkAvailability = (req, res) => {
+export const checkAvailability = async (req, res) => {
   try {
     const { facility_id, court_id, date, duration_hours = 1 } = req.body;
 
@@ -30,21 +36,23 @@ export const checkAvailability = (req, res) => {
     }
 
     // Check Holiday
-    const holiday = db.prepare(
-      'SELECT * FROM holidays WHERE (holiday_date = ? OR is_recurring = 1) AND (facility_id IS NULL OR facility_id = ?)'
-    ).get(date, facility_id);
+    const holidays = await Holiday.find({
+      $or: [{ holiday_date: date }, { is_recurring: true }],
+      $and: [{ $or: [{ facility_id: null }, { facility_id }] }],
+    });
 
-    if (holiday && holiday.holiday_date === date) {
+    const activeHoliday = holidays.find((h) => h.holiday_date === date);
+    if (activeHoliday) {
       return res.json({
         success: false,
         is_closed: true,
-        message: `Facility is closed on this date due to holiday: ${holiday.name}`,
-        slots: []
+        message: `Facility is closed on this date due to holiday: ${activeHoliday.name}`,
+        slots: [],
       });
     }
 
-    const facility = db.prepare('SELECT * FROM facilities WHERE id = ?').get(facility_id);
-    const court = db.prepare('SELECT * FROM courts WHERE id = ?').get(court_id);
+    const facility = await Facility.findById(facility_id);
+    const court = await Court.findById(court_id);
 
     if (!facility || !court) {
       return res.status(404).json({ success: false, message: 'Facility or Court not found' });
@@ -52,27 +60,29 @@ export const checkAvailability = (req, res) => {
 
     // Check Operating Hours
     const dayOfWeek = bookingDate.getDay(); // 0 (Sun) - 6 (Sat)
-    const operatingHour = db.prepare('SELECT * FROM operating_hours WHERE facility_id = ? AND day_of_week = ?').get(facility_id, dayOfWeek);
+    const operatingHour = await OperatingHour.findOne({ facility_id, day_of_week: dayOfWeek });
 
     if (operatingHour && operatingHour.is_closed) {
       return res.json({
         success: false,
         is_closed: true,
         message: 'Facility is closed on this day of the week.',
-        slots: []
+        slots: [],
       });
     }
 
-    const openTimeStr = operatingHour ? operatingHour.open_time : (facility.open_time || '05:00');
-    const closeTimeStr = operatingHour ? operatingHour.close_time : (facility.close_time || '23:00');
+    const openTimeStr = operatingHour ? operatingHour.open_time : facility.open_time || '05:00';
+    const closeTimeStr = operatingHour ? operatingHour.close_time : facility.close_time || '23:00';
 
     const openHour = parseInt(openTimeStr.split(':')[0], 10);
     const closeHour = parseInt(closeTimeStr.split(':')[0], 10);
 
     // Get existing active bookings for this court on this date
-    const existingBookings = db.prepare(
-      "SELECT start_time, end_time FROM bookings WHERE court_id = ? AND booking_date = ? AND status IN ('pending', 'approved', 'checked_in', 'completed')"
-    ).all(court_id, date);
+    const existingBookings = await Booking.find({
+      court_id,
+      booking_date: date,
+      status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+    }).select('start_time end_time');
 
     const slots = [];
     const isToday = bookingDate.toDateString() === new Date().toDateString();
@@ -108,7 +118,7 @@ export const checkAvailability = (req, res) => {
         duration_hours: duration,
         label,
         available: !isBooked && !isPastSlot,
-        reason: isBooked ? 'Booked / Overlap' : (isPastSlot ? 'Past Time' : 'Available')
+        reason: isBooked ? 'Booked / Overlap' : isPastSlot ? 'Past Time' : 'Available',
       });
     }
 
@@ -119,16 +129,15 @@ export const checkAvailability = (req, res) => {
       is_closed: false,
       hourly_rate: hourlyRate,
       duration_hours: duration,
-      slots
+      slots,
     });
-
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // Create a new booking (Customer)
-export const createBooking = (req, res) => {
+export const createBooking = async (req, res) => {
   try {
     const { facility_id, court_id, booking_date, start_time, end_time, payment_method, notes } = req.body;
 
@@ -136,25 +145,34 @@ export const createBooking = (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide all required booking details.' });
     }
 
-    const facility = db.prepare('SELECT * FROM facilities WHERE id = ?').get(facility_id);
-    const court = db.prepare('SELECT * FROM courts WHERE id = ?').get(court_id);
+    const facility = await Facility.findById(facility_id);
+    const court = await Court.findById(court_id);
 
     if (!facility || !court) {
       return res.status(404).json({ success: false, message: 'Selected facility or court does not exist.' });
     }
 
     // Double check availability against existing bookings
-    const overlapBooking = db.prepare(
-      "SELECT id FROM bookings WHERE court_id = ? AND booking_date = ? AND status IN ('pending', 'approved', 'checked_in', 'completed') AND (start_time < ? AND end_time > ?)"
-    ).get(court_id, booking_date, end_time, start_time);
+    const activeBookings = await Booking.find({
+      court_id,
+      booking_date,
+      status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+    });
 
-    if (overlapBooking) {
+    const newStartMins = timeToMinutes(start_time);
+    const newEndMins = timeToMinutes(end_time);
+
+    const hasOverlap = activeBookings.some((b) => {
+      const bStart = timeToMinutes(b.start_time);
+      const bEnd = timeToMinutes(b.end_time);
+      return newStartMins < bEnd && newEndMins > bStart;
+    });
+
+    if (hasOverlap) {
       return res.status(400).json({ success: false, message: 'The selected court and time slot is no longer available.' });
     }
 
-    const startMins = timeToMinutes(start_time);
-    const endMins = timeToMinutes(end_time);
-    const duration_hours = Math.max(1, (endMins - startMins) / 60);
+    const duration_hours = Math.max(1, (newEndMins - newStartMins) / 60);
 
     const hourly_rate = court.hourly_rate_override ?? facility.hourly_rate;
     const subtotal = hourly_rate * duration_hours;
@@ -165,14 +183,9 @@ export const createBooking = (req, res) => {
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const booking_code = `HOA-${dateCode}-${randomStr}`;
 
-    const info = db.prepare(`
-      INSERT INTO bookings (
-        booking_code, user_id, facility_id, court_id, booking_date, start_time, end_time,
-        duration_hours, hourly_rate, subtotal, tax_amount, total_amount, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-    `).run(
+    const booking = await Booking.create({
       booking_code,
-      req.user.id,
+      user_id: req.user._id,
       facility_id,
       court_id,
       booking_date,
@@ -183,27 +196,22 @@ export const createBooking = (req, res) => {
       subtotal,
       tax_amount,
       total_amount,
-      notes || ''
-    );
+      status: 'pending',
+      notes: notes || '',
+    });
 
-    const bookingId = Number(info.lastInsertRowid);
     const isPaidOnline = payment_method !== 'cash';
     const refNum = isPaidOnline ? `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null;
 
-    db.prepare(`
-      INSERT INTO payments (booking_id, user_id, amount, payment_method, payment_status, reference_number, paid_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      bookingId,
-      req.user.id,
-      total_amount,
+    await Payment.create({
+      booking_id: booking._id,
+      user_id: req.user._id,
+      amount: total_amount,
       payment_method,
-      isPaidOnline ? 'paid' : 'unpaid',
-      refNum,
-      isPaidOnline ? new Date().toISOString() : null
-    );
-
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+      payment_status: isPaidOnline ? 'paid' : 'unpaid',
+      reference_number: refNum,
+      paid_at: isPaidOnline ? new Date() : null,
+    });
 
     // Send confirmation email asynchronously
     sendBookingConfirmationEmail({
@@ -225,7 +233,7 @@ export const createBooking = (req, res) => {
       success: true,
       message: 'Booking reservation submitted successfully!',
       booking_code,
-      booking: { ...booking, _id: booking.id },
+      booking: { ...booking.toObject(), id: booking._id, _id: booking._id },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -233,7 +241,7 @@ export const createBooking = (req, res) => {
 };
 
 // Admin / Staff: Manually Create & Occupy Time Slot (Walk-ins / Custom Time Slots)
-export const createManualBookingAdmin = (req, res) => {
+export const createManualBookingAdmin = async (req, res) => {
   try {
     const {
       facility_id,
@@ -246,49 +254,65 @@ export const createManualBookingAdmin = (req, res) => {
       customer_phone,
       payment_method = 'cash',
       payment_status = 'paid',
-      notes = ''
+      notes = '',
     } = req.body;
 
     if (!facility_id || !court_id || !booking_date || !start_time || !end_time) {
       return res.status(400).json({ success: false, message: 'Facility, Court, Date, Start Time, and End Time are required.' });
     }
 
-    const facility = db.prepare('SELECT * FROM facilities WHERE id = ?').get(facility_id);
-    const court = db.prepare('SELECT * FROM courts WHERE id = ?').get(court_id);
+    const facility = await Facility.findById(facility_id);
+    const court = await Court.findById(court_id);
 
     if (!facility || !court) {
       return res.status(404).json({ success: false, message: 'Facility or Court not found.' });
     }
 
     // Check overlap with existing active bookings
-    const overlapBooking = db.prepare(
-      "SELECT booking_code FROM bookings WHERE court_id = ? AND booking_date = ? AND status IN ('pending', 'approved', 'checked_in', 'completed') AND (start_time < ? AND end_time > ?)"
-    ).get(court_id, booking_date, end_time, start_time);
+    const activeBookings = await Booking.find({
+      court_id,
+      booking_date,
+      status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+    });
+
+    const newStartMins = timeToMinutes(start_time);
+    const newEndMins = timeToMinutes(end_time);
+
+    const overlapBooking = activeBookings.find((b) => {
+      const bStart = timeToMinutes(b.start_time);
+      const bEnd = timeToMinutes(b.end_time);
+      return newStartMins < bEnd && newEndMins > bStart;
+    });
 
     if (overlapBooking) {
       return res.status(400).json({
         success: false,
-        message: `Cannot book time slot ${start_time} - ${end_time}. It overlaps with existing booking [${overlapBooking.booking_code}].`
+        message: `Cannot book time slot ${start_time} - ${end_time}. It overlaps with existing booking [${overlapBooking.booking_code}].`,
       });
     }
 
     // If customer name is provided, create or reuse user profile
-    let targetUserId = req.user.id;
+    let targetUserId = req.user._id;
     if (customer_name) {
       const emailLookup = customer_email ? customer_email.toLowerCase() : `walkin_${Date.now()}@houseofas.com`;
-      const existingUser = db.prepare('SELECT id FROM users WHERE email = ? OR name = ?').get(emailLookup, customer_name);
+      let existingUser = await User.findOne({ $or: [{ email: emailLookup }, { name: customer_name }] });
+
       if (existingUser) {
-        targetUserId = existingUser.id;
+        targetUserId = existingUser._id;
       } else {
-        const createStmt = db.prepare('INSERT INTO users (name, email, password, phone, role) VALUES (?, ?, ?, ?, ?)');
-        const newUserInfo = createStmt.run(customer_name, emailLookup, 'walkin123', customer_phone || '', 'customer');
-        targetUserId = Number(newUserInfo.lastInsertRowid);
+        const newUser = await User.create({
+          name: customer_name,
+          email: emailLookup,
+          password: 'walkin123',
+          phone: customer_phone || '',
+          role: 'customer',
+          is_verified: true,
+        });
+        targetUserId = newUser._id;
       }
     }
 
-    const startMins = timeToMinutes(start_time);
-    const endMins = timeToMinutes(end_time);
-    const duration_hours = Math.max(0.5, (endMins - startMins) / 60);
+    const duration_hours = Math.max(0.5, (newEndMins - newStartMins) / 60);
 
     const hourly_rate = court.hourly_rate_override ?? facility.hourly_rate;
     const subtotal = hourly_rate * duration_hours;
@@ -299,14 +323,9 @@ export const createManualBookingAdmin = (req, res) => {
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const booking_code = `HOA-MANUAL-${dateCode}-${randomStr}`;
 
-    const info = db.prepare(`
-      INSERT INTO bookings (
-        booking_code, user_id, facility_id, court_id, booking_date, start_time, end_time,
-        duration_hours, hourly_rate, subtotal, tax_amount, total_amount, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)
-    `).run(
+    const booking = await Booking.create({
       booking_code,
-      targetUserId,
+      user_id: targetUserId,
       facility_id,
       court_id,
       booking_date,
@@ -317,32 +336,27 @@ export const createManualBookingAdmin = (req, res) => {
       subtotal,
       tax_amount,
       total_amount,
-      notes || 'Manual Admin Reservation'
-    );
+      status: 'approved',
+      notes: notes || 'Manual Admin Reservation',
+    });
 
-    const bookingId = Number(info.lastInsertRowid);
     const refNum = `PAY-MANUAL-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    db.prepare(`
-      INSERT INTO payments (booking_id, user_id, amount, payment_method, payment_status, reference_number, paid_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      bookingId,
-      targetUserId,
-      total_amount,
+    await Payment.create({
+      booking_id: booking._id,
+      user_id: targetUserId,
+      amount: total_amount,
       payment_method,
       payment_status,
-      refNum,
-      payment_status === 'paid' ? new Date().toISOString() : null
-    );
-
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+      reference_number: refNum,
+      paid_at: payment_status === 'paid' ? new Date() : null,
+    });
 
     return res.status(201).json({
       success: true,
       message: `Time slot ${start_time} - ${end_time} reserved for ${customer_name || 'Customer'}.`,
       booking_code,
-      booking: { ...booking, _id: booking.id },
+      booking: { ...booking.toObject(), id: booking._id, _id: booking._id },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -350,34 +364,24 @@ export const createManualBookingAdmin = (req, res) => {
 };
 
 // Get My Bookings (Customer)
-export const getMyBookings = (req, res) => {
+export const getMyBookings = async (req, res) => {
   try {
     const { status } = req.query;
-
-    let sql = `
-      SELECT b.*, f.name as facility_name, f.location as facility_location, f.image_url as facility_image,
-             c.name as court_name, c.court_type
-      FROM bookings b
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      WHERE b.user_id = ?
-    `;
-    const params = [req.user.id];
+    const query = { user_id: req.user._id };
 
     if (status) {
-      sql += ' AND b.status = ?';
-      params.push(status);
+      query.status = status;
     }
 
-    sql += ' ORDER BY b.id DESC';
-
-    const bookings = db.prepare(sql).all(...params);
+    const bookings = await Booking.find(query)
+      .populate('facility_id', 'name location image_url')
+      .populate('court_id', 'name court_type')
+      .sort({ createdAt: -1 });
 
     const mapped = bookings.map((b) => ({
-      ...b,
-      _id: b.id,
-      facility_id: { _id: b.facility_id, name: b.facility_name, location: b.facility_location, image_url: b.facility_image },
-      court_id: { _id: b.court_id, name: b.court_name, court_type: b.court_type },
+      ...b.toObject(),
+      id: b._id,
+      _id: b._id,
     }));
 
     return res.json({ success: true, bookings: mapped });
@@ -387,54 +391,46 @@ export const getMyBookings = (req, res) => {
 };
 
 // Get Single Booking Details
-export const getBookingById = (req, res) => {
+export const getBookingById = async (req, res) => {
   try {
-    const b = db.prepare(`
-      SELECT b.*, f.name as facility_name, f.location as facility_location,
-             c.name as court_name, c.court_type,
-             u.name as user_name, u.email as user_email, u.phone as user_phone
-      FROM bookings b
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      LEFT JOIN users u ON b.user_id = u.id
-      WHERE b.id = ?
-    `).get(req.params.id);
+    const booking = await Booking.findById(req.params.id)
+      .populate('facility_id', 'name location image_url')
+      .populate('court_id', 'name court_type')
+      .populate('user_id', 'name email phone');
 
-    if (!b) {
+    if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (req.user.role === 'customer' && b.user_id !== req.user.id) {
+    if (req.user.role === 'customer' && booking.user_id._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
-    const payment = db.prepare('SELECT * FROM payments WHERE booking_id = ?').get(b.id);
+    const payment = await Payment.findOne({ booking_id: booking._id });
 
-    const booking = {
-      ...b,
-      _id: b.id,
-      facility_id: { _id: b.facility_id, name: b.facility_name, location: b.facility_location },
-      court_id: { _id: b.court_id, name: b.court_name, court_type: b.court_type },
-      user_id: { _id: b.user_id, name: b.user_name, email: b.user_email, phone: b.user_phone },
+    const mapped = {
+      ...booking.toObject(),
+      id: booking._id,
+      _id: booking._id,
     };
 
-    return res.json({ success: true, booking, payment });
+    return res.json({ success: true, booking: mapped, payment });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // Cancel Booking (Customer)
-export const cancelBooking = (req, res) => {
+export const cancelBooking = async (req, res) => {
   try {
     const { reason } = req.body;
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (req.user.role === 'customer' && booking.user_id !== req.user.id) {
+    if (req.user.role === 'customer' && booking.user_id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
@@ -442,12 +438,14 @@ export const cancelBooking = (req, res) => {
       return res.status(400).json({ success: false, message: `Booking cannot be cancelled when status is [${booking.status}]` });
     }
 
-    db.prepare("UPDATE bookings SET status = 'cancelled', cancellation_reason = ? WHERE id = ?").run(reason || 'Cancelled by customer', booking.id);
+    booking.status = 'cancelled';
+    booking.cancellation_reason = reason || 'Cancelled by customer';
+    await booking.save();
 
-    const payment = db.prepare('SELECT * FROM payments WHERE booking_id = ?').get(booking.id);
+    const payment = await Payment.findOne({ booking_id: booking._id });
     if (payment) {
-      const newPaymentStatus = payment.payment_status === 'paid' ? 'refunded' : 'unpaid';
-      db.prepare('UPDATE payments SET payment_status = ? WHERE id = ?').run(newPaymentStatus, payment.id);
+      payment.payment_status = payment.payment_status === 'paid' ? 'refunded' : 'unpaid';
+      await payment.save();
     }
 
     return res.json({ success: true, message: 'Booking cancelled successfully' });
@@ -457,40 +455,25 @@ export const cancelBooking = (req, res) => {
 };
 
 // Admin/Staff: Get All Bookings with Filter
-export const getAllBookingsAdmin = (req, res) => {
+export const getAllBookingsAdmin = async (req, res) => {
   try {
     const { status, date } = req.query;
+    const query = {};
 
-    let sql = `
-      SELECT b.*, f.name as facility_name, c.name as court_name,
-             u.name as user_name, u.email as user_email, u.phone as user_phone
-      FROM bookings b
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      LEFT JOIN users u ON b.user_id = u.id
-      WHERE 1=1
-    `;
-    const params = [];
+    if (status) query.status = status;
+    if (date) query.booking_date = date;
 
-    if (status) {
-      sql += ' AND b.status = ?';
-      params.push(status);
-    }
-    if (date) {
-      sql += ' AND b.booking_date = ?';
-      params.push(date);
-    }
-
-    sql += ' ORDER BY b.id DESC';
-
-    const bookings = db.prepare(sql).all(...params);
+    const bookings = await Booking.find(query)
+      .populate('user_id', 'name email phone')
+      .populate('facility_id', 'name')
+      .populate('court_id', 'name')
+      .sort({ createdAt: -1 });
 
     const mapped = bookings.map((b) => ({
-      ...b,
-      _id: b.id,
-      user_id: { _id: b.user_id, name: b.user_name || 'Walk-in Guest', email: b.user_email || '', phone: b.user_phone || '' },
-      facility_id: { _id: b.facility_id, name: b.facility_name },
-      court_id: { _id: b.court_id, name: b.court_name },
+      ...b.toObject(),
+      id: b._id,
+      _id: b._id,
+      user_id: b.user_id ? { _id: b.user_id._id, name: b.user_id.name, email: b.user_id.email, phone: b.user_id.phone } : { name: 'Walk-in Guest', email: '', phone: '' },
     }));
 
     return res.json({ success: true, bookings: mapped });
@@ -500,28 +483,23 @@ export const getAllBookingsAdmin = (req, res) => {
 };
 
 // Admin/Staff: Calendar Events API (Includes Customer Name in Title)
-export const getCalendarEventsAdmin = (req, res) => {
+export const getCalendarEventsAdmin = async (req, res) => {
   try {
-    const bookings = db.prepare(`
-      SELECT b.*, f.name as facility_name, c.name as court_name, u.name as user_name
-      FROM bookings b
-      LEFT JOIN facilities f ON b.facility_id = f.id
-      LEFT JOIN courts c ON b.court_id = c.id
-      LEFT JOIN users u ON b.user_id = u.id
-      WHERE b.status != 'cancelled'
-    `).all();
+    const bookings = await Booking.find({ status: { $ne: 'cancelled' } })
+      .populate('user_id', 'name')
+      .populate('court_id', 'name');
 
     const events = bookings.map((b) => {
-      const customerName = b.user_name || 'Walk-in Customer';
+      const customerName = b.user_id?.name || 'Walk-in Customer';
       return {
-        id: b.id,
-        title: `${customerName} - ${b.court_name || 'Court'}`,
+        id: b._id,
+        title: `${customerName} - ${b.court_id?.name || 'Court'}`,
         start: `${b.booking_date}T${b.start_time}`,
         end: `${b.booking_date}T${b.end_time}`,
         status: b.status,
         booking_code: b.booking_code,
         customer_name: customerName,
-        notes: b.notes
+        notes: b.notes,
       };
     });
 
@@ -532,7 +510,7 @@ export const getCalendarEventsAdmin = (req, res) => {
 };
 
 // Admin/Staff: Update Booking Status
-export const updateBookingStatusAdmin = (req, res) => {
+export const updateBookingStatusAdmin = async (req, res) => {
   try {
     const { status } = req.body;
     const allowedStatuses = ['approved', 'rejected', 'checked_in', 'completed', 'cancelled'];
@@ -541,10 +519,17 @@ export const updateBookingStatusAdmin = (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
-    db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
+    const booking = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
 
     if (status === 'approved') {
-      db.prepare("UPDATE payments SET payment_status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE booking_id = ? AND payment_method = 'cash'").run(req.params.id);
+      await Payment.findOneAndUpdate(
+        { booking_id: booking._id, payment_method: 'cash' },
+        { payment_status: 'paid', paid_at: new Date() }
+      );
     }
 
     return res.json({ success: true, message: `Booking status updated to ${status}` });
@@ -554,22 +539,18 @@ export const updateBookingStatusAdmin = (req, res) => {
 };
 
 // Public: Calendar Events API (Anonymized for public viewing)
-export const getPublicCalendarEvents = (req, res) => {
+export const getPublicCalendarEvents = async (req, res) => {
   try {
-    const bookings = db.prepare(`
-      SELECT b.id, b.booking_date, b.start_time, b.end_time, b.status, c.name as court_name
-      FROM bookings b
-      LEFT JOIN courts c ON b.court_id = c.id
-      WHERE b.status IN ('pending', 'approved', 'checked_in', 'completed')
-    `).all();
+    const bookings = await Booking.find({ status: { $in: ['pending', 'approved', 'checked_in', 'completed'] } })
+      .populate('court_id', 'name');
 
     const events = bookings.map((b) => ({
-      id: b.id,
+      id: b._id,
       title: 'Reserved',
       start: `${b.booking_date}T${b.start_time}`,
       end: `${b.booking_date}T${b.end_time}`,
       status: b.status,
-      court_name: b.court_name,
+      court_name: b.court_id?.name || 'Court',
     }));
 
     return res.json({ success: true, events });
@@ -577,4 +558,3 @@ export const getPublicCalendarEvents = (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-

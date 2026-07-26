@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import db from '../config/db.js';
+import User from '../models/User.js';
 
-export const protect = (req, res, next) => {
+export const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -12,7 +12,7 @@ export const protect = (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_sports_center_jwt_key_2026');
 
-      const user = db.prepare('SELECT id, name, email, phone, role FROM users WHERE id = ?').get(decoded.id);
+      const user = await User.findById(decoded.id).select('-password');
 
       if (!user) {
         return res.status(401).json({ success: false, message: 'User account not found.' });

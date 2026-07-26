@@ -8,6 +8,9 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     phone: { type: String, trim: true, default: '' },
     role: { type: String, enum: ['customer', 'staff', 'admin'], default: 'customer' },
+    is_verified: { type: Boolean, default: true },
+    verification_code: { type: String, default: null },
+    verification_expires_at: { type: Date, default: null },
   },
   { timestamps: true }
 );

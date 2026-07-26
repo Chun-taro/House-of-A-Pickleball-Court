@@ -1,23 +1,17 @@
-import bcrypt from 'bcryptjs';
-import db from '../config/db.js';
+import User from '../models/User.js';
 
 // Admin: Get all users
-export const getUsers = (req, res) => {
+export const getUsers = async (req, res) => {
   try {
     const { role } = req.query;
-
-    let sql = 'SELECT id, name, email, phone, role, created_at FROM users';
-    const params = [];
+    const query = {};
 
     if (role) {
-      sql += ' WHERE role = ?';
-      params.push(role);
+      query.role = role;
     }
 
-    sql += ' ORDER BY id DESC';
-
-    const usersList = db.prepare(sql).all(...params);
-    const users = usersList.map(u => ({ ...u, _id: u.id }));
+    const usersList = await User.find(query).select('-password').sort({ createdAt: -1 });
+    const users = usersList.map((u) => ({ ...u.toObject(), id: u._id, _id: u._id }));
     return res.json({ success: true, users });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -33,21 +27,24 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+    const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(400).json({ success: false, message: 'Email address is already in use.' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      phone: phone || '',
+      role: role || 'customer',
+      is_verified: true,
+    });
 
-    const info = db.prepare(
-      'INSERT INTO users (name, email, password, phone, role) VALUES (?, ?, ?, ?, ?)'
-    ).run(name, email.toLowerCase(), hashedPassword, phone || '', role || 'customer');
+    const mapped = { ...user.toObject(), id: user._id, _id: user._id };
+    delete mapped.password;
 
-    const userId = Number(info.lastInsertRowid);
-    const user = db.prepare('SELECT id, name, email, phone, role FROM users WHERE id = ?').get(userId);
-    return res.status(201).json({ success: true, message: 'User created successfully', user: { ...user, _id: user.id } });
+    return res.status(201).json({ success: true, message: 'User created successfully', user: mapped });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -57,43 +54,37 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { name, email, phone, role, password } = req.body;
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    const user = await User.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    let sql = 'UPDATE users SET name = ?, email = ?, phone = ?, role = ?';
-    const params = [name || user.name, email || user.email, phone !== undefined ? phone : user.phone, role || user.role];
+    if (name) user.name = name;
+    if (email) user.email = email.toLowerCase();
+    if (phone !== undefined) user.phone = phone;
+    if (role) user.role = role;
+    if (password) user.password = password;
 
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      sql += ', password = ?';
-      params.push(hashedPassword);
-    }
+    await user.save();
 
-    sql += ' WHERE id = ?';
-    params.push(req.params.id);
+    const mapped = { ...user.toObject(), id: user._id, _id: user._id };
+    delete mapped.password;
 
-    db.prepare(sql).run(...params);
-
-    const updatedUser = db.prepare('SELECT id, name, email, phone, role FROM users WHERE id = ?').get(req.params.id);
-
-    return res.json({ success: true, message: 'User updated successfully', user: { ...updatedUser, _id: updatedUser.id } });
+    return res.json({ success: true, message: 'User updated successfully', user: mapped });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // Admin: Delete user
-export const deleteUser = (req, res) => {
+export const deleteUser = async (req, res) => {
   try {
-    if (String(req.params.id) === String(req.user.id)) {
+    if (String(req.params.id) === String(req.user._id)) {
       return res.status(400).json({ success: false, message: 'You cannot delete your own admin account.' });
     }
 
-    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+    await User.findByIdAndDelete(req.params.id);
     return res.json({ success: true, message: 'User account deleted successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
