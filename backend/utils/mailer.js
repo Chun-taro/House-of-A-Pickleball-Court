@@ -20,7 +20,13 @@ const getTransporter = () => {
   });
 };
 
-// Generic Send Email Function with Error Safety
+// Strip HTML tags for clean plain-text fallback (Crucial for Spam Filter score)
+const stripHtml = (htmlStr) => {
+  if (!htmlStr) return '';
+  return htmlStr.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+};
+
+// Generic Send Email Function with Error Safety & Anti-Spam Headers
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const transporter = getTransporter();
@@ -30,14 +36,21 @@ export const sendEmail = async ({ to, subject, html, text }) => {
       return { success: false, skipped: true, message: 'Gmail credentials not configured' };
     }
 
-    const fromAddress = process.env.EMAIL_FROM || `"House of A's Pickleball" <${process.env.GMAIL_USER}>`;
+    const fromAddress = process.env.EMAIL_FROM || `"House of A's Pickleball Court" <${process.env.GMAIL_USER}>`;
+    const plainText = text || stripHtml(html);
 
     const info = await transporter.sendMail({
       from: fromAddress,
       to,
+      replyTo: process.env.GMAIL_USER,
       subject,
-      text: text || '',
+      text: plainText,
       html,
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high',
+      },
     });
 
     console.log(`[Google Mailer Success] Email sent to ${to} (Message ID: ${info.messageId})`);
