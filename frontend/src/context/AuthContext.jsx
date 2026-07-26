@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Configure default base URL for Express backend
-axios.defaults.baseURL = 'http://localhost:5000';
+// Configure dynamic base URL for Axios (local dev vs production Vercel)
+if (import.meta.env.VITE_API_URL) {
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+} else if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+  axios.defaults.baseURL = 'http://localhost:5000';
+} else {
+  axios.defaults.baseURL = ''; // Use relative API routes on Vercel deployment
+}
 
 const AuthContext = createContext();
 
