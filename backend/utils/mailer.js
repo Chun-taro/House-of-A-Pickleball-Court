@@ -2,8 +2,12 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Create Gmail SMTP Transporter
-const createTransporter = () => {
+// Cached Transporter instance for connection reuse across serverless calls
+let cachedTransporter = null;
+
+const getTransporter = () => {
+  if (cachedTransporter) return cachedTransporter;
+
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
 
@@ -11,22 +15,27 @@ const createTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransport({
+  cachedTransporter = nodemailer.createTransport({
     service: 'gmail',
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
+    pool: true, // Reuse TCP connection pool for instant email delivery
+    maxConnections: 5,
+    maxMessages: 100,
     auth: {
       user: user,
       pass: pass,
     },
   });
+
+  return cachedTransporter;
 };
 
 // Generic Send Email Function with Error Safety
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    const transporter = createTransporter();
+    const transporter = getTransporter();
 
     if (!transporter) {
       console.log(`[Google Mailer Warning] Gmail credentials not configured in .env. Skipping email to: ${to}`);
