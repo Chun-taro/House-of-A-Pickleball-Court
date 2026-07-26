@@ -2,6 +2,7 @@
   "name": "house-of-as-pickleball-mern",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Full MERN Stack Reservation System for House of A's Pickleball Court",
   "scripts": {
     "install:backend": "cd backend && npm install",
