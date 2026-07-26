@@ -66,9 +66,23 @@ export const updateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Prevent admin from accidently removing their own admin status
+    // Prevent changing role if this is the LAST remaining Admin account in the database
+    if (role && user.role === 'admin' && role !== 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid Action: Cannot change the role of the LAST remaining Admin account in the system. Create another Admin account first.',
+        });
+      }
+    }
+
+    // Prevent admin from accidently removing their own admin status while logged in
     if (String(req.params.id) === String(req.user._id) && role && role !== 'admin') {
-      return res.status(400).json({ success: false, message: 'You cannot remove your own Admin role privileges.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Action: You cannot demote your own Admin account while logged in.',
+      });
     }
 
     if (name) user.name = name;
@@ -93,6 +107,21 @@ export const deleteUser = async (req, res) => {
   try {
     if (String(req.params.id) === String(req.user._id)) {
       return res.status(400).json({ success: false, message: 'You cannot delete your own admin account.' });
+    }
+
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    if (targetUser.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid Action: Cannot delete the LAST remaining Admin account in the system.',
+        });
+      }
     }
 
     await User.findByIdAndDelete(req.params.id);

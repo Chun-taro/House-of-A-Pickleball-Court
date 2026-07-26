@@ -49,9 +49,17 @@ export default function UsersAdmin() {
   const handleRoleChange = (id, newRole) => {
     axios.put(`/api/users/${id}`, { role: newRole })
       .then((res) => {
-        if (res.data.success) fetchUsers();
+        if (res.data.success) {
+          fetchUsers();
+        } else {
+          alert(`⚠️ Action Blocked: ${res.data.message}`);
+          fetchUsers();
+        }
       })
-      .catch((err) => alert(err.response?.data?.message || 'Failed to update role'));
+      .catch((err) => {
+        alert(`⚠️ Action Blocked: ${err.response?.data?.message || 'Failed to update role'}`);
+        fetchUsers();
+      });
   };
 
   const handleDeleteUser = (id) => {
