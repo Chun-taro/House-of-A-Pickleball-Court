@@ -9,7 +9,13 @@ try {
   // Ignore if custom dns servers cannot be set
 }
 
+let cachedDb = null;
+
 const connectDB = async () => {
+  if (cachedDb && mongoose.connection.readyState >= 1) {
+    return cachedDb;
+  }
+
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       serverSelectionTimeoutMS: 5000,
@@ -17,10 +23,12 @@ const connectDB = async () => {
       tls: true,
       tlsAllowInvalidCertificates: true,
     });
+    cachedDb = conn;
     console.log(`MongoDB Atlas Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
-    process.exit(1);
+    throw error;
   }
 };
 
