@@ -1,23 +1,27 @@
 import mongoose from 'mongoose';
 import dns from 'node:dns';
 
-// Fix DNS resolution for MongoDB Atlas SRV connection strings on Windows networks
-try {
-  dns.setDefaultResultOrder('ipv4first');
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (e) {
-  // Ignore if custom dns servers cannot be set
+// Fix DNS resolution for MongoDB Atlas SRV connection strings on Windows networks only
+if (process.platform === 'win32') {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch (e) {
+    // Ignore if custom dns servers cannot be set
+  }
 }
 
 let cachedDb = null;
 
 const connectDB = async () => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb+srv://houseofaspickleballcourt_db_user:oGCcoxN7lrp6PfFS@cluster0.pgvk5si.mongodb.net/house_of_as_pickleball?retryWrites=true&w=majority&appName=Cluster0';
+
   if (cachedDb && mongoose.connection.readyState >= 1) {
     return cachedDb;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
+    const conn = await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
       ssl: true,
       tls: true,
