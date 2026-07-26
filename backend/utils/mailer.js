@@ -2,12 +2,8 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Cached Transporter instance for connection reuse across serverless calls
-let cachedTransporter = null;
-
+// Create fresh Nodemailer Transporter per email dispatch to avoid serverless frozen socket timeouts
 const getTransporter = () => {
-  if (cachedTransporter) return cachedTransporter;
-
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
 
@@ -15,21 +11,13 @@ const getTransporter = () => {
     return null;
   }
 
-  cachedTransporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    pool: true, // Reuse TCP connection pool for instant email delivery
-    maxConnections: 5,
-    maxMessages: 100,
     auth: {
       user: user,
       pass: pass,
     },
   });
-
-  return cachedTransporter;
 };
 
 // Generic Send Email Function with Error Safety
