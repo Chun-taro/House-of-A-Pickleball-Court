@@ -11,7 +11,12 @@ try {
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      ssl: true,
+      tls: true,
+      tlsAllowInvalidCertificates: true,
+    });
     console.log(`MongoDB Atlas Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
