@@ -69,7 +69,7 @@ export const updatePaymentStatus = async (req, res) => {
     }
 
     if (payment_status === 'paid' && payment.user_id?.email) {
-      sendPaymentReceiptEmail({
+      await sendPaymentReceiptEmail({
         payment: payment.toObject(),
         booking: { booking_code: payment.booking_id?.booking_code },
         user: { name: payment.user_id.name, email: payment.user_id.email },

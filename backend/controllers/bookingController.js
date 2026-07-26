@@ -213,8 +213,8 @@ export const createBooking = async (req, res) => {
       paid_at: isPaidOnline ? new Date() : null,
     });
 
-    // Send confirmation email asynchronously
-    sendBookingConfirmationEmail({
+    // Await confirmation email for Vercel Serverless environment
+    await sendBookingConfirmationEmail({
       booking,
       user: req.user,
       courtName: court.name,
@@ -222,7 +222,7 @@ export const createBooking = async (req, res) => {
     }).catch((err) => console.error('Booking mailer error:', err));
 
     if (isPaidOnline) {
-      sendPaymentReceiptEmail({
+      await sendPaymentReceiptEmail({
         payment: { amount: total_amount, payment_method, reference_number: refNum },
         booking,
         user: req.user,

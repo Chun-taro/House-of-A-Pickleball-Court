@@ -49,8 +49,8 @@ export const register = async (req, res) => {
       });
     }
 
-    // Send 6-digit verification code email
-    sendVerificationCodeEmail({ name, email: lowerEmail, code: otpCode })
+    // Await 6-digit verification code email so Vercel Serverless Function doesn't kill the connection
+    await sendVerificationCodeEmail({ name, email: lowerEmail, code: otpCode })
       .catch((err) => console.error('Verification Mailer error:', err));
 
     return res.status(201).json({
@@ -108,8 +108,8 @@ export const verifyOTP = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    // Send Welcome Email asynchronously
-    sendWelcomeEmail({ id: user._id, name: user.name, email: user.email })
+    // Await Welcome Email in serverless environment
+    await sendWelcomeEmail({ id: user._id, name: user.name, email: user.email })
       .catch((err) => console.error('Welcome Mailer error:', err));
 
     return res.json({
@@ -158,8 +158,8 @@ export const resendOTP = async (req, res) => {
     user.verification_expires_at = expiresAt;
     await user.save();
 
-    // Send new verification email
-    sendVerificationCodeEmail({ name: user.name, email: lowerEmail, code: otpCode })
+    // Await new verification email in serverless environment
+    await sendVerificationCodeEmail({ name: user.name, email: lowerEmail, code: otpCode })
       .catch((err) => console.error('Resend Mailer error:', err));
 
     return res.json({
@@ -192,7 +192,7 @@ export const login = async (req, res) => {
         user.verification_expires_at = expiresAt;
         await user.save();
 
-        sendVerificationCodeEmail({ name: user.name, email: user.email, code: otpCode }).catch(err => console.error(err));
+        await sendVerificationCodeEmail({ name: user.name, email: user.email, code: otpCode }).catch(err => console.error(err));
 
         return res.status(403).json({
           success: false,
