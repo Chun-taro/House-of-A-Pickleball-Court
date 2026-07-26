@@ -1,0 +1,158 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+
+// Configure default base URL for Express backend
+axios.defaults.baseURL = 'http://localhost:5000';
+
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('sc_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('sc_token') || null;
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
+
+  const login = async (email, password) => {
+    setLoading(true);
+    try {
+      const res = await axios.post('/api/auth/login', { email, password });
+      if (res.data.success) {
+        setUser(res.data.user);
+        setToken(res.data.token);
+        localStorage.setItem('sc_user', JSON.stringify(res.data.user));
+        localStorage.setItem('sc_token', res.data.token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+        return { success: true, user: res.data.user };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      if (err.response?.data?.requiresVerification) {
+        return {
+          success: false,
+          requiresVerification: true,
+          email: err.response.data.email,
+          message: err.response.data.message,
+        };
+      }
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Login failed. Please check your credentials.',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (name, email, password, phone) => {
+    setLoading(true);
+    try {
+      const res = await axios.post('/api/auth/register', { name, email, password, phone });
+      if (res.data.success) {
+        if (res.data.requiresVerification) {
+          return {
+            success: true,
+            requiresVerification: true,
+            email: res.data.email,
+            message: res.data.message,
+          };
+        }
+        setUser(res.data.user);
+        setToken(res.data.token);
+        localStorage.setItem('sc_user', JSON.stringify(res.data.user));
+        localStorage.setItem('sc_token', res.data.token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+        return { success: true, user: res.data.user };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Registration failed.',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOTP = async (email, code) => {
+    setLoading(true);
+    try {
+      const res = await axios.post('/api/auth/verify-otp', { email, code });
+      if (res.data.success) {
+        setUser(res.data.user);
+        setToken(res.data.token);
+        localStorage.setItem('sc_user', JSON.stringify(res.data.user));
+        localStorage.setItem('sc_token', res.data.token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+        return { success: true, user: res.data.user, message: res.data.message };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Verification failed. Please check the code.',
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendOTP = async (email) => {
+    try {
+      const res = await axios.post('/api/auth/resend-otp', { email });
+      if (res.data.success) {
+        return { success: true, message: res.data.message };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Resend code failed.',
+      };
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('sc_user');
+    localStorage.removeItem('sc_token');
+    delete axios.defaults.headers.common['Authorization'];
+  };
+
+  const updateProfile = async (profileData) => {
+    try {
+      const res = await axios.put('/api/auth/profile', profileData);
+      if (res.data.success) {
+        setUser(res.data.user);
+        localStorage.setItem('sc_user', JSON.stringify(res.data.user));
+        return { success: true, message: res.data.message };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      return { success: false, message: err.response?.data?.message || 'Profile update failed' };
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, loading, login, register, verifyOTP, resendOTP, logout, updateProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);
