@@ -153,6 +153,21 @@ export const generatePdfReceipt = (data, outputStream) => {
     .text('Status', 380, thY + 7)
     .text('Amount (PHP)', 470, thY + 7, { align: 'right' });
 
+  // Derive a human-readable payment status label
+  let paymentStatusLabel;
+  if (payment?.payment_status === 'paid') {
+    paymentStatusLabel = 'PAID';
+  } else if (payment?.payment_status === 'refunded') {
+    paymentStatusLabel = 'REFUNDED';
+  } else if (payment?.payment_status === 'failed') {
+    paymentStatusLabel = 'FAILED';
+  } else if (isApproved) {
+    // Booking is approved but payment record not yet marked paid (shouldn't happen normally)
+    paymentStatusLabel = payment?.payment_method === 'cash' ? 'PENDING CASH PAYMENT' : 'PENDING VERIFICATION';
+  } else {
+    paymentStatusLabel = 'PENDING APPROVAL';
+  }
+
   // Table Row
   const trY = thY + 30;
   doc
@@ -161,7 +176,7 @@ export const generatePdfReceipt = (data, outputStream) => {
     .font('Helvetica')
     .text(`Pickleball Court Booking (${booking.duration_hours || 1} hrs)`, 50, trY)
     .text((payment?.payment_method || 'GCash').toUpperCase(), 250, trY)
-    .text((payment?.payment_status || booking.status || 'PAID').toUpperCase(), 380, trY)
+    .text(paymentStatusLabel, 380, trY)
     .font('Helvetica-Bold')
     .text(`PHP ${(booking.total_amount || 0).toFixed(2)}`, 470, trY, { align: 'right' });
 

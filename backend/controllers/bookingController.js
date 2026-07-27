@@ -594,8 +594,9 @@ export const updateBookingStatusAdmin = async (req, res) => {
     }
 
     if (status === 'approved') {
+      // Mark any linked payment as paid on admin approval (covers both cash and GCash)
       await Payment.findOneAndUpdate(
-        { booking_id: booking._id, payment_method: 'cash' },
+        { booking_id: booking._id, payment_status: { $ne: 'paid' } },
         { payment_status: 'paid', paid_at: new Date() }
       );
     }
