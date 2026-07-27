@@ -39,8 +39,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 3. Health Check Endpoint (No DB connection required)
-app.get('/api/health', (req, res) => {
+// 3. Health Check Endpoint (Returns 200 OK immediately without waiting for DB)
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({ success: true, message: "House of A's Express MongoDB Atlas API Server is Running!" });
 });
 
@@ -50,19 +50,23 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (err) {
-    console.error('DB Middleware Error:', err.message);
-    res.status(500).json({ success: false, message: `Database Connection Error: ${err.message}` });
+    console.error('DB Middleware Error:', err);
+    return res.status(500).json({
+      success: false,
+      message: `Database Connection Error: ${err.message}`,
+      details: 'Check MongoDB Atlas IP Whitelist (allow 0.0.0.0/0 on Atlas) or process.env.MONGO_URI.',
+    });
   }
 });
 
-// 5. API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/facilities', facilityRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/schedules', scheduleRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/users', userRoutes);
+// 5. API Routes (Support both /api/ prefix and bare route paths)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/facilities', '/facilities'], facilityRoutes);
+app.use(['/api/bookings', '/bookings'], bookingRoutes);
+app.use(['/api/schedules', '/schedules'], scheduleRoutes);
+app.use(['/api/payments', '/payments'], paymentRoutes);
+app.use(['/api/reports', '/reports'], reportRoutes);
+app.use(['/api/users', '/users'], userRoutes);
 
 // 6. 404 Handler
 app.use((req, res) => {
