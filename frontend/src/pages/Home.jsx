@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Trophy, Calendar, Sparkles, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star, Volume2, ShieldAlert, Wifi, CloudRain, Gamepad2, FileText } from 'lucide-react';
+import { Trophy, Calendar, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star, Volume2, ShieldAlert, Wifi, CloudRain, Gamepad2, FileText, Car, Bath, ShoppingBag, KeyRound, Tag, Banknote, Users } from 'lucide-react';
 import CourtAvailabilityCalendar from '../components/CourtAvailabilityCalendar';
 
 import logoImg from '../images/Logo.jpg';
@@ -50,7 +50,7 @@ export default function Home() {
 
           <div>
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-900/85 backdrop-blur-md text-emerald-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider border border-emerald-800/60 shadow-md">
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 animate-spin-slow shrink-0" /> Malaybalay’s Premier Pickleball Venue
+              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Malaybalay’s Premier Pickleball Venue
             </div>
           </div>
           
@@ -62,12 +62,25 @@ export default function Home() {
             Purok-1, Linabo, Malaybalay City, Bukidnon. Book our private single court for casual matches, family games, or competitive pickleball sessions.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          {/* Court Rates Banner in Hero */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 px-5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 shadow-lg text-xs sm:text-sm">
+            <span className="font-extrabold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-emerald-400" /> Court Rates:
+            </span>
+            <span className="bg-slate-800 text-slate-100 font-bold px-3 py-1 rounded-xl border border-slate-700">
+              5:00 AM - 5:00 PM: <span className="text-emerald-400 font-extrabold">₱150/hr</span>
+            </span>
+            <span className="bg-slate-800 text-slate-100 font-bold px-3 py-1 rounded-xl border border-slate-700">
+              5:00 PM - 11:00 PM: <span className="text-emerald-400 font-extrabold">₱200/hr</span>
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <Link
               to="/booking/wizard"
               className="gradient-btn-primary w-full sm:w-auto px-8 py-4 rounded-2xl text-white font-extrabold text-sm shadow-xl flex items-center justify-center gap-2.5 transition-all cursor-pointer"
             >
-              <Calendar className="w-5 h-5 text-emerald-100" /> Reserve Court Slot (₱150/hr) <ArrowRight className="w-4 h-4" />
+              <Calendar className="w-5 h-5 text-emerald-100" /> Reserve Court Slot <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -75,6 +88,111 @@ export default function Home() {
 
       {/* Court Availability Calendar Section */}
       <CourtAvailabilityCalendar />
+
+      {/* OPEN COURT FREE PLAY PROMO SHOWCASE */}
+      <section className="relative rounded-3xl p-6 sm:p-10 space-y-8 shadow-[0_0_50px_rgba(16,185,129,0.18)] border-2 border-emerald-500/40 bg-gradient-to-br from-slate-950 via-emerald-950/70 to-slate-950 text-white overflow-hidden">
+        {/* Glow ambient background elements */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        {/* Top Header Banner */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-slate-800/90 pb-8 relative z-10">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black uppercase tracking-widest border border-emerald-400/40 shadow-xs backdrop-blur-md">
+              <Clock className="w-4 h-4 text-emerald-400" /> Morning Community Open Play
+            </div>
+            
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-none">
+              OPEN COURT <span className="gradient-text-emerald">FREE PLAY</span>
+            </h2>
+            
+            <p className="text-sm sm:text-base text-slate-200 font-medium leading-relaxed">
+              Enjoy up to <strong className="text-emerald-300">8 hours of morning play</strong> for just <strong className="text-emerald-300 font-mono text-lg">₱70 per person</strong>! Play with your own group or join other pickleball players on court.
+            </p>
+          </div>
+
+          {/* Hero Price Tag Card */}
+          <div className="relative group shrink-0 w-full lg:w-auto">
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-2xl blur-sm opacity-50 group-hover:opacity-100 transition duration-300"></div>
+            <div className="relative bg-slate-900/95 backdrop-blur-xl p-6 rounded-2xl border border-emerald-500/50 text-center lg:text-right shadow-2xl space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-950/90 text-emerald-300 text-xs font-black uppercase tracking-wider border border-emerald-800">
+                <Clock className="w-4 h-4 text-emerald-400" /> 5:00 AM – 1:00 PM
+              </div>
+              <div className="text-4xl sm:text-5xl font-black text-emerald-300 font-mono tracking-tight drop-shadow-md">
+                ₱70 <span className="text-xs text-slate-300 font-sans font-extrabold uppercase">/ person</span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Morning Open Play • Walk-in Cash</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Guideline Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10 text-xs">
+          {/* 1. Capacity */}
+          <div className="p-5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800 space-y-3 hover:border-emerald-400/60 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shadow-xs">
+              <Users className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-white text-base">16 Players Max</h3>
+            <p className="text-slate-300 leading-relaxed font-medium">
+              Limited to <strong>16 players only</strong> per morning session to ensure everyone gets maximum court play time.
+            </p>
+          </div>
+
+          {/* 2. Group or Join */}
+          <div className="p-5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800 space-y-3 hover:border-teal-400/60 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+            <div className="w-11 h-11 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold shadow-xs">
+              <Heart className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-white text-base">Group or Solo</h3>
+            <p className="text-slate-300 leading-relaxed font-medium">
+              Play with your own group or join other players who are at the court that morning.
+            </p>
+          </div>
+
+          {/* 3. Check Live Calendar */}
+          <div className="p-5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800 space-y-3 hover:border-emerald-400/60 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shadow-xs">
+              <Calendar className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-white text-base">Check Live Website</h3>
+            <p className="text-slate-300 leading-relaxed font-medium">
+              Before coming, kindly check our live website calendar to verify no exclusive court bookings are scheduled.
+            </p>
+          </div>
+
+          {/* 4. Cash Only */}
+          <div className="p-5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800 space-y-3 hover:border-teal-400/60 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+            <div className="w-11 h-11 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold shadow-xs">
+              <Banknote className="w-6 h-6" />
+            </div>
+            <h3 className="font-black text-white text-base">Cash Payment Only</h3>
+            <p className="text-slate-300 leading-relaxed font-medium">
+              Payment for Open Court Free Play is <strong>cash only</strong> and can be made at the house upon arrival.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer Option Banner */}
+        <div className="p-5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800/90 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs relative z-10 shadow-lg">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">💡</span>
+            <p className="text-slate-200 font-semibold leading-relaxed">
+              <strong>Prefer Private Court Access?</strong> Book an exclusive court reservation for your private group online.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+            <span className="text-emerald-300 font-extrabold text-sm italic font-serif hidden md:inline-block">See you on court! ♡</span>
+            <Link
+              to="/booking/wizard"
+              className="gradient-btn-primary px-6 py-3 rounded-xl font-extrabold text-white shrink-0 shadow-md flex items-center justify-center gap-2 transition-all hover:scale-105"
+            >
+              Book Exclusive Court <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Facility Details Card */}
       {loading ? (
@@ -88,8 +206,10 @@ export default function Home() {
                 alt="House of A's Court"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute top-4 right-4 bg-slate-950/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black text-emerald-400 shadow-md border border-slate-800">
-                ₱{facility.hourly_rate} / Hour
+              <div className="absolute top-4 right-4 bg-slate-950/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-black text-emerald-400 shadow-md border border-slate-800 flex items-center gap-1.5">
+                <span>5am-5pm: ₱150/hr</span>
+                <span className="text-slate-500">•</span>
+                <span>5pm-11pm: ₱200/hr</span>
               </div>
             </div>
 
@@ -113,6 +233,12 @@ export default function Home() {
                     <Clock className="w-4 h-4" />
                   </div>
                   <span><strong>Operating Hours:</strong> 5:00 AM - 11:00 PM (Daily)</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <span><strong>Court Rates:</strong> 5:00 AM - 5:00 PM: <strong>₱150/hr</strong> | 5:00 PM - 11:00 PM: <strong>₱200/hr</strong></span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200">
@@ -159,6 +285,69 @@ export default function Home() {
           </div>
           <h3 className="text-lg font-extrabold text-slate-900">Instant Confirmation</h3>
           <p className="text-sm text-slate-600 leading-relaxed">Reserve cash or GCash online, get your digital booking code, and bring your paddles to play!</p>
+        </div>
+      </section>
+
+      {/* Venue Amenities Section */}
+      <section className="glass-card p-8 sm:p-10 rounded-3xl space-y-8 shadow-xl border border-slate-200">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider border border-emerald-200">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Convenience & Services
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Venue Amenities & Gear
+            </h2>
+          </div>
+          <p className="text-xs text-slate-500 max-w-sm">
+            Everything you need for a comfortable and enjoyable pickleball session at House of A's.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Road Parking */}
+          <div className="p-6 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-3 hover:border-emerald-400 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 font-bold">
+              <Car className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900">Road Parking</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Convenient roadside parking spaces right outside the venue for vehicles and motorcycles.
+            </p>
+          </div>
+
+          {/* Restroom */}
+          <div className="p-6 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-3 hover:border-teal-400 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 font-bold">
+              <Bath className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900">Restroom</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Clean and private restroom facilities available on-site for all players and guests.
+            </p>
+          </div>
+
+          {/* Paddle & Balls */}
+          <div className="p-6 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-3 hover:border-amber-400 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 font-bold">
+              <ShoppingBag className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900">Paddle & Balls</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Pickleball paddles and balls available for rent or for sale at the court desk.
+            </p>
+          </div>
+
+          {/* Keychains */}
+          <div className="p-6 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-3 hover:border-indigo-400 hover:shadow-md transition-all">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 font-bold">
+              <KeyRound className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900">Keychains for Sale</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Exclusive House of A's souvenir keychains available for purchase.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -215,11 +404,13 @@ export default function Home() {
             </div>
             <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-black">3</span>
-              Amenities
+              Amenities & Equipment
             </h3>
             <ul className="text-xs text-slate-600 space-y-2 list-disc list-inside leading-relaxed">
-              <li><strong className="text-slate-800 font-bold">Free Wi-Fi</strong> is available for all guests.</li>
-              <li>Food, snacks, and bottled water are available for purchase on site.</li>
+              <li><strong className="text-slate-800 font-bold">Road Parking & Restroom</strong> available on site.</li>
+              <li><strong className="text-slate-800 font-bold">Paddle & Balls</strong> for rent or for sale.</li>
+              <li><strong className="text-slate-800 font-bold">Keychains</strong> for sale at counter.</li>
+              <li><strong className="text-slate-800 font-bold">Free Wi-Fi</strong> for all court guests.</li>
             </ul>
           </div>
 

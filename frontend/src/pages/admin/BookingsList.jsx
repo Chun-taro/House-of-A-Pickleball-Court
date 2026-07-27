@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import ManualBookingModal from '../../components/ManualBookingModal';
-import { Filter, Check, X, LogIn, Plus, CalendarCheck, User } from 'lucide-react';
+import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download } from 'lucide-react';
 
 export default function BookingsList() {
   const [bookings, setBookings] = useState([]);
@@ -131,6 +131,16 @@ export default function BookingsList() {
                     <td className="p-3"><StatusBadge status={b.status} /></td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={`/api/bookings/${b._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition-colors"
+                          title="Download PDF Receipt"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+
                         {b.status === 'pending' && (
                           <>
                             <button

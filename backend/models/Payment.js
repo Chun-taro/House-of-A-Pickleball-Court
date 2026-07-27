@@ -17,6 +17,15 @@ const paymentSchema = new mongoose.Schema(
     },
     reference_number: { type: String, default: null },
     paid_at: { type: Date, default: null },
+    proof_of_payment_url: { type: String, default: null },
+    proof_filename: { type: String, default: null },
+    proof_uploaded_at: { type: Date, default: null },
+    proof_expires_at: { type: Date, default: null },
+    proof_status: {
+      type: String,
+      enum: ['none', 'uploaded', 'verified', 'expired_deleted'],
+      default: 'none',
+    },
   },
   { timestamps: true }
 );

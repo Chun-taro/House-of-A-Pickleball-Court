@@ -177,9 +177,9 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2 cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-md shadow-emerald-600/20 flex items-center justify-center transition-all disabled:opacity-50 mt-2 cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" /> {loading ? 'Sending Code...' : 'Complete Registration'}
+              {loading ? 'Sending Code...' : 'Complete Registration'}
             </button>
           </form>
         )}

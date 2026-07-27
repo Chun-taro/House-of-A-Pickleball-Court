@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Trophy, Calendar, LogOut, LayoutDashboard, Sparkles, UserCheck, Menu, X, User } from 'lucide-react';
+import { Trophy, Calendar, LogOut, LayoutDashboard, UserCheck, Menu, X, User } from 'lucide-react';
 
 import logoImg from '../images/Logo.jpg';
 
@@ -134,9 +134,8 @@ export default function Navbar() {
                   </Link>
                   <Link
                     to="/register"
-                    className="gradient-btn-primary text-xs font-extrabold text-white px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                    className="gradient-btn-primary text-xs font-extrabold text-white px-4 py-2 rounded-xl shadow-md transition-all"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
                     Register
                   </Link>
                 </div>
@@ -201,9 +200,8 @@ export default function Navbar() {
                 </Link>
                 <Link
                   to="/register"
-                  className="gradient-btn-primary py-2.5 px-4 text-center rounded-xl text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md"
+                  className="gradient-btn-primary py-2.5 px-4 text-center rounded-xl text-white font-extrabold text-xs shadow-md"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
                   Register
                 </Link>
               </div>

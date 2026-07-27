@@ -10,8 +10,10 @@ import {
   getAllBookingsAdmin,
   getCalendarEventsAdmin,
   updateBookingStatusAdmin,
+  downloadReceiptPdf,
 } from '../controllers/bookingController.js';
 import { protect, requireRole } from '../middleware/auth.js';
+import { uploadProof } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -19,11 +21,13 @@ const router = express.Router();
 router.post('/check-availability', checkAvailability);
 router.get('/public-calendar-events', getPublicCalendarEvents);
 
+// Customer & User routes (With optional proof_image upload for GCash)
+router.post('/', protect, uploadProof.single('proof_image'), createBooking);
+router.get('/my-bookings', protect, getMyBookings);
+router.post('/:id/cancel', protect, cancelBooking);
 
-// Customer routes
-router.post('/', protect, requireRole('customer'), createBooking);
-router.get('/my-bookings', protect, requireRole('customer'), getMyBookings);
-router.post('/:id/cancel', protect, requireRole('customer'), cancelBooking);
+// Download PDF Receipt Route
+router.get('/:id/receipt', downloadReceiptPdf);
 
 // Shared Admin/Staff routes
 router.get('/admin/all', protect, requireRole('admin', 'staff'), getAllBookingsAdmin);

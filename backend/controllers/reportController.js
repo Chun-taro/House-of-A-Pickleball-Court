@@ -2,6 +2,7 @@ import Booking from '../models/Booking.js';
 import Payment from '../models/Payment.js';
 import Facility from '../models/Facility.js';
 import User from '../models/User.js';
+import Court from '../models/Court.js';
 
 // Get Admin Dashboard Overview Metrics
 export const getDashboardStats = async (req, res) => {
@@ -43,6 +44,7 @@ export const getDashboardStats = async (req, res) => {
         approvedBookings,
         completedBookings,
         activeFacilities,
+        totalFacilities: activeFacilities,
         totalCustomers,
         totalRevenue,
       },

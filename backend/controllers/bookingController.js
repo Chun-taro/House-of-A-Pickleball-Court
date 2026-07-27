@@ -6,6 +6,7 @@ import OperatingHour from '../models/OperatingHour.js';
 import Holiday from '../models/Holiday.js';
 import User from '../models/User.js';
 import { sendBookingConfirmationEmail, sendPaymentReceiptEmail } from '../utils/mailer.js';
+import { generatePdfReceipt } from '../utils/pdfReceiptGenerator.js';
 
 // Helper to convert "HH:MM" string to total minutes from midnight
 const timeToMinutes = (timeStr) => {
@@ -14,6 +15,34 @@ const timeToMinutes = (timeStr) => {
   const h = parseInt(parts[0], 10) || 0;
   const m = parseInt(parts[1], 10) || 0;
   return h * 60 + m;
+};
+
+// Helper to calculate tiered court rates:
+// 5:00 AM - 5:00 PM (05:00 - 17:00): ₱150 / hr
+// 5:00 PM - 11:00 PM (17:00 - 23:00): ₱200 / hr
+export const calculateTieredPrice = (startTimeStr, endTimeStr) => {
+  const startMins = timeToMinutes(startTimeStr);
+  const endMins = timeToMinutes(endTimeStr);
+  const cutoffMins = 17 * 60; // 17:00 (5:00 PM)
+
+  const DAY_RATE = 150;
+  const EVENING_RATE = 200;
+
+  let total = 0;
+
+  if (startMins < cutoffMins) {
+    const dayEnd = Math.min(endMins, cutoffMins);
+    const dayHours = (dayEnd - startMins) / 60;
+    total += dayHours * DAY_RATE;
+  }
+
+  if (endMins > cutoffMins) {
+    const eveningStart = Math.max(startMins, cutoffMins);
+    const eveningHours = (endMins - eveningStart) / 60;
+    total += eveningHours * EVENING_RATE;
+  }
+
+  return total;
 };
 
 // Check date/court availability and return time slots based on chosen duration_hours
@@ -112,22 +141,33 @@ export const checkAvailability = async (req, res) => {
         return slotStartMins < bEndMins && slotEndMins > bStartMins;
       });
 
+      const slotPrice = calculateTieredPrice(slotStartStr, slotEndStr);
+      const slotHourlyRate = slotPrice / duration;
+      const rateLabel = h < 17 ? 'Day Rate (₱150/hr)' : 'Evening Rate (₱200/hr)';
+
       slots.push({
         start_time: slotStartStr,
         end_time: slotEndStr,
         duration_hours: duration,
         label,
+        price: slotPrice,
+        hourly_rate: slotHourlyRate,
+        rate_label: rateLabel,
         available: !isBooked && !isPastSlot,
         reason: isBooked ? 'Booked / Overlap' : isPastSlot ? 'Past Time' : 'Available',
       });
     }
 
-    const hourlyRate = court.hourly_rate_override ?? facility.hourly_rate;
-
     return res.json({
       success: true,
       is_closed: false,
-      hourly_rate: hourlyRate,
+      hourly_rate: 150, // Base default day rate
+      rates: {
+        day_rate: 150,
+        evening_rate: 200,
+        day_period: '5:00 AM - 5:00 PM',
+        evening_period: '5:00 PM - 11:00 PM',
+      },
       duration_hours: duration,
       slots,
     });
@@ -172,10 +212,10 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'The selected court and time slot is no longer available.' });
     }
 
-    const duration_hours = Math.max(1, (newEndMins - newStartMins) / 60);
+    const duration_hours = Math.max(0.5, (newEndMins - newStartMins) / 60);
 
-    const hourly_rate = court.hourly_rate_override ?? facility.hourly_rate;
-    const subtotal = hourly_rate * duration_hours;
+    const subtotal = calculateTieredPrice(start_time, end_time);
+    const hourly_rate = duration_hours > 0 ? subtotal / duration_hours : 150;
     const tax_amount = 0;
     const total_amount = subtotal + tax_amount;
 
@@ -201,16 +241,27 @@ export const createBooking = async (req, res) => {
     });
 
     const isPaidOnline = payment_method !== 'cash';
-    const refNum = isPaidOnline ? `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null;
+    const refNum = req.body.reference_number || (isPaidOnline ? `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null);
 
-    await Payment.create({
+    const hasProofFile = !!req.file;
+    const proofFilename = hasProofFile ? req.file.filename : null;
+    const proofUrl = hasProofFile ? `/api/payments/proof/${req.file.filename}` : null;
+    const proofUploadedAt = hasProofFile ? new Date() : null;
+    const proofExpiresAt = hasProofFile ? new Date(Date.now() + 72 * 60 * 60 * 1000) : null;
+
+    const payment = await Payment.create({
       booking_id: booking._id,
       user_id: req.user._id,
       amount: total_amount,
       payment_method,
-      payment_status: isPaidOnline ? 'paid' : 'unpaid',
+      payment_status: payment_method === 'cash' ? 'unpaid' : (hasProofFile ? 'unpaid' : (isPaidOnline ? 'paid' : 'unpaid')),
       reference_number: refNum,
-      paid_at: isPaidOnline ? new Date() : null,
+      paid_at: (isPaidOnline && !hasProofFile) ? new Date() : null,
+      proof_filename: proofFilename,
+      proof_of_payment_url: proofUrl,
+      proof_uploaded_at: proofUploadedAt,
+      proof_expires_at: proofExpiresAt,
+      proof_status: hasProofFile ? 'uploaded' : 'none',
     });
 
     // Await confirmation email for Vercel Serverless environment
@@ -314,8 +365,8 @@ export const createManualBookingAdmin = async (req, res) => {
 
     const duration_hours = Math.max(0.5, (newEndMins - newStartMins) / 60);
 
-    const hourly_rate = court.hourly_rate_override ?? facility.hourly_rate;
-    const subtotal = hourly_rate * duration_hours;
+    const subtotal = calculateTieredPrice(start_time, end_time);
+    const hourly_rate = duration_hours > 0 ? subtotal / duration_hours : 150;
     const tax_amount = 0;
     const total_amount = subtotal + tax_amount;
 
@@ -555,6 +606,49 @@ export const getPublicCalendarEvents = async (req, res) => {
 
     return res.json({ success: true, events });
   } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Download PDF Receipt for a Booking (Customer owner or Admin/Staff)
+export const downloadReceiptPdf = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('user_id', 'name email phone')
+      .populate('facility_id', 'name location')
+      .populate('court_id', 'name court_type');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
+    }
+
+    // Authorization Check: If user is authenticated, verify ownership or Admin/Staff role
+    if (req.user) {
+      const isOwner = booking.user_id && booking.user_id._id.toString() === req.user._id.toString();
+      const isAdminStaff = ['admin', 'staff'].includes(req.user.role);
+
+      if (!isOwner && !isAdminStaff) {
+        return res.status(403).json({ success: false, message: 'Unauthorized to download receipt for this booking.' });
+      }
+    }
+
+    const payment = await Payment.findOne({ booking_id: booking._id });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Receipt-${booking.booking_code}.pdf`);
+
+    generatePdfReceipt(
+      {
+        booking: booking.toObject(),
+        payment: payment ? payment.toObject() : null,
+        user: booking.user_id ? booking.user_id.toObject() : null,
+        court: booking.court_id ? booking.court_id.toObject() : null,
+        facility: booking.facility_id ? booking.facility_id.toObject() : null,
+      },
+      res
+    );
+  } catch (error) {
+    console.error('PDF Receipt Generation Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

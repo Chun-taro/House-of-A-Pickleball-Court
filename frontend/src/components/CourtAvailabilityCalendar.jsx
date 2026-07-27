@@ -79,6 +79,9 @@ export default function CourtAvailabilityCalendar() {
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600"></span> Available Slots
           </span>
+          <span className="px-2.5 py-1 rounded-lg bg-emerald-100/80 text-emerald-900 font-extrabold text-[11px] border border-emerald-300">
+            5am-5pm: ₱150/hr • 5pm-11pm: ₱200/hr
+          </span>
         </div>
         <div className="flex items-center gap-1.5 text-slate-500 font-medium">
           <ShieldCheck className="w-4 h-4 text-emerald-600" /> Real-time Double-Booking Protection
@@ -103,11 +106,20 @@ export default function CourtAvailabilityCalendar() {
               center: 'title',
               right: 'timeGridWeek,timeGridDay,dayGridMonth',
             }}
+            buttonText={{
+              today: 'Today',
+              month: 'Month',
+              week: 'Week',
+              day: 'Day',
+            }}
+            dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
             events={events}
             slotMinTime="05:00:00"
             slotMaxTime="23:00:00"
+            slotDuration="01:00:00"
             allDaySlot={false}
             height="auto"
+            contentHeight="auto"
             dateClick={handleDateClick}
             eventClick={(info) => {
               const eventDate = info.event.startStr.split('T')[0];

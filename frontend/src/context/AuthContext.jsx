@@ -10,6 +10,31 @@ if (import.meta.env.VITE_API_URL) {
   axios.defaults.baseURL = ''; // Use relative API routes on Vercel deployment
 }
 
+// Request Interceptor: Ensure Authorization Bearer token is attached synchronously on ALL requests
+axios.interceptors.request.use(
+  (config) => {
+    const storedToken = localStorage.getItem('sc_token');
+    if (storedToken) {
+      config.headers.Authorization = `Bearer ${storedToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor: Handle 401 Unauthorized (e.g. stale token after re-seeding DB) by clearing local storage
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('sc_token');
+      localStorage.removeItem('sc_user');
+      delete axios.defaults.headers.common['Authorization'];
+    }
+    return Promise.reject(error);
+  }
+);
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -19,7 +44,11 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('sc_token') || null;
+    const savedToken = localStorage.getItem('sc_token') || null;
+    if (savedToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+    }
+    return savedToken;
   });
 
   const [loading, setLoading] = useState(false);

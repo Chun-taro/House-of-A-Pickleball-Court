@@ -1,3 +1,5 @@
+import path from 'path';
+import fs from 'fs';
 import Payment from '../models/Payment.js';
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
@@ -58,14 +60,20 @@ export const updatePaymentStatus = async (req, res) => {
     const updateFields = { payment_status };
     if (payment_status === 'paid') {
       updateFields.paid_at = new Date();
+      updateFields.proof_status = 'verified';
     }
 
     const payment = await Payment.findByIdAndUpdate(req.params.id, updateFields, { new: true })
       .populate('user_id', 'name email')
-      .populate('booking_id', 'booking_code');
+      .populate('booking_id', 'booking_code status');
 
     if (!payment) {
       return res.status(404).json({ success: false, message: 'Payment not found' });
+    }
+
+    // Also update booking status if payment is verified paid
+    if (payment_status === 'paid' && payment.booking_id) {
+      await Booking.findByIdAndUpdate(payment.booking_id._id, { status: 'approved' });
     }
 
     if (payment_status === 'paid' && payment.user_id?.email) {
@@ -76,7 +84,105 @@ export const updatePaymentStatus = async (req, res) => {
       }).catch((err) => console.error('Payment receipt mailer error:', err));
     }
 
-    return res.json({ success: true, message: `Payment status updated to ${payment_status}` });
+    return res.json({ success: true, message: `Payment status updated to ${payment_status}`, payment });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Upload or re-upload GCash Proof of Payment
+export const uploadProofImage = async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a proof of payment image file.' });
+    }
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Payment record not found.' });
+    }
+
+    // Ownership or Admin check
+    if (payment.user_id.toString() !== req.user._id.toString() && !['admin', 'staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to upload proof for this payment.' });
+    }
+
+    // If an existing file exists, delete old file to conserve storage
+    if (payment.proof_filename) {
+      const oldPath = path.join(process.cwd(), 'uploads', 'proofs', payment.proof_filename);
+      if (fs.existsSync(oldPath)) {
+        await fs.promises.unlink(oldPath).catch((err) => console.error('Old proof delete error:', err));
+      }
+    }
+
+    const uploadedAt = new Date();
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours (3 days)
+
+    payment.proof_filename = req.file.filename;
+    payment.proof_of_payment_url = `/api/payments/proof/${req.file.filename}`;
+    payment.proof_uploaded_at = uploadedAt;
+    payment.proof_expires_at = expiresAt;
+    payment.proof_status = 'verified';
+    payment.payment_status = 'paid';
+    payment.paid_at = uploadedAt;
+
+    if (req.body.reference_number) {
+      payment.reference_number = req.body.reference_number;
+    }
+
+    await payment.save();
+
+    // Automatically update booking status to approved upon receiving payment proof
+    if (payment.booking_id) {
+      const booking = await Booking.findById(payment.booking_id)
+        .populate('user_id', 'name email phone')
+        .populate('facility_id', 'name location')
+        .populate('court_id', 'name court_type');
+
+      if (booking) {
+        if (booking.status === 'pending') {
+          booking.status = 'approved';
+          await booking.save();
+        }
+
+        // Send payment receipt email to customer
+        if (booking.user_id && booking.user_id.email) {
+          sendPaymentReceiptEmail({
+            booking: booking.toObject(),
+            payment: payment.toObject(),
+            user: booking.user_id.toObject(),
+            court: booking.court_id ? booking.court_id.toObject() : null,
+            facility: booking.facility_id ? booking.facility_id.toObject() : null,
+          }).catch((err) => console.error('Payment receipt email error on proof upload:', err));
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Proof of payment uploaded successfully! Payment status is now Paid and your reservation is Approved.',
+      proof_url: payment.proof_of_payment_url,
+      proof_expires_at: expiresAt,
+      payment,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Serve Proof Image (Check file existence in uploads/proofs)
+export const serveProofImage = async (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(process.cwd(), 'uploads', 'proofs', filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Proof image file has been purged or retention period expired.' });
+    }
+
+    return res.sendFile(filePath);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

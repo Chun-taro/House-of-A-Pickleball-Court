@@ -9,8 +9,22 @@ A dedicated MERN (MongoDB, Express, React, Node.js) reservation system for **Hou
 - **Venue Name**: House of A’s Pickleball Court
 - **Location**: Purok-1, Linabo, Malaybalay City, Bukidnon
 - **Description**: Family-owned outdoor covered single court venue for pickleball training, friendly matches, and open play.
-- **Operating Hours**: 6:00 AM – 10:00 PM (Daily)
-- **Hourly Rate**: ₱150.00 / Hour
+- **Operating Hours**: 5:00 AM – 11:00 PM (Daily)
+- **Court Rates (Exclusive Reservations)**:
+  - 5:00 AM – 5:00 PM: **₱150.00 / Hour**
+  - 5:00 PM – 11:00 PM: **₱200.00 / Hour**
+- **Open Court Free Play Promo**:
+  - Schedule: **5:00 AM – 1:00 PM**
+  - Price: **₱70.00 per person** (Enjoy up to 8 hours of play)
+  - Player Limit: **16 players max**
+  - Grouping: Play with your own group or join other morning players on court
+  - Payment: **Cash only** at the house counter
+- **Amenities & Gear**:
+  - Road Parking
+  - Clean Restroom
+  - Paddle and Balls for rent or for sale
+  - Keychains for sale
+  - Free Wi-Fi
 
 ---
 

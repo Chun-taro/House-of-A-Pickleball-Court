@@ -1,0 +1,202 @@
+import PDFDocument from 'pdfkit';
+
+/**
+ * Generate a PDF Receipt Stream using PDFKit
+ * @param {Object} data - Contains booking, payment, user, court, and facility info
+ * @param {WritableStream} outputStream - Express res stream or writable stream
+ */
+export const generatePdfReceipt = (data, outputStream) => {
+  const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+  doc.pipe(outputStream);
+
+  const { booking, payment, user, court, facility } = data;
+
+  const emeraldColor = '#059669';
+  const darkSlateColor = '#0f172a';
+  const lightBgColor = '#f8fafc';
+
+  // Header Banner Background
+  doc.rect(0, 0, 595.28, 110).fill(darkSlateColor);
+
+  // Header Title
+  doc
+    .fillColor('#ffffff')
+    .fontSize(22)
+    .font('Helvetica-Bold')
+    .text("HOUSE OF A'S PICKLEBALL COURT", 40, 30);
+
+  doc
+    .fillColor('#a7f3d0')
+    .fontSize(10)
+    .font('Helvetica')
+    .text('Purok-1, Linabo, Malaybalay City, Bukidnon • Premier Sports Venue', 40, 58);
+
+  doc
+    .fillColor('#ffffff')
+    .fontSize(12)
+    .font('Helvetica-Bold')
+    .text('OFFICIAL PAYMENT RECEIPT', 40, 78, { align: 'right' });
+
+  doc.moveDown(4);
+
+  // Receipt Meta Grid
+  const startY = 130;
+  doc.rect(40, startY, 515, 60).fill(lightBgColor).stroke('#cbd5e1');
+
+  doc
+    .fillColor(darkSlateColor)
+    .fontSize(10)
+    .font('Helvetica-Bold')
+    .text(`Booking Reference Code:`, 55, startY + 12)
+    .fillColor(emeraldColor)
+    .fontSize(14)
+    .text(booking.booking_code || 'HOA-RECEIPT', 55, startY + 28);
+
+  doc
+    .fillColor(darkSlateColor)
+    .fontSize(10)
+    .font('Helvetica-Bold')
+    .text(`Transaction Reference:`, 320, startY + 12)
+    .fillColor('#1e293b')
+    .fontSize(11)
+    .font('Helvetica')
+    .text(payment?.reference_number || `PAY-${booking.booking_code}`, 320, startY + 28);
+
+  // Customer Information Section
+  const custY = startY + 80;
+  doc
+    .fillColor(darkSlateColor)
+    .fontSize(12)
+    .font('Helvetica-Bold')
+    .text('CUSTOMER INFORMATION', 40, custY);
+
+  doc
+    .moveTo(40, custY + 16)
+    .lineTo(555, custY + 16)
+    .strokeColor(emeraldColor)
+    .lineWidth(2)
+    .stroke();
+
+  doc
+    .fillColor('#334155')
+    .fontSize(10)
+    .font('Helvetica')
+    .text(`Full Name: ${user?.name || 'Customer'}`, 40, custY + 26)
+    .text(`Email Address: ${user?.email || 'N/A'}`, 40, custY + 42)
+    .text(`Contact Phone: ${user?.phone || 'N/A'}`, 40, custY + 58);
+
+  // Booking & Venue Details Section
+  const bookY = custY + 90;
+  doc
+    .fillColor(darkSlateColor)
+    .fontSize(12)
+    .font('Helvetica-Bold')
+    .text('RESERVATION & COURT DETAILS', 40, bookY);
+
+  doc
+    .moveTo(40, bookY + 16)
+    .lineTo(555, bookY + 16)
+    .strokeColor(emeraldColor)
+    .lineWidth(2)
+    .stroke();
+
+  doc
+    .fillColor('#334155')
+    .fontSize(10)
+    .font('Helvetica')
+    .text(`Facility: ${facility?.name || "House of A's Pickleball Court"}`, 40, bookY + 26)
+    .text(`Court: ${court?.name || "Main Court"}`, 40, bookY + 42)
+    .text(`Booking Date: ${booking.booking_date}`, 40, bookY + 58)
+    .text(`Time Schedule: ${booking.start_time} - ${booking.end_time} (${booking.duration_hours || 1} hr/s)`, 300, bookY + 58);
+
+  // Payment Breakdown Table
+  const tableY = bookY + 90;
+  doc
+    .fillColor(darkSlateColor)
+    .fontSize(12)
+    .font('Helvetica-Bold')
+    .text('PAYMENT BREAKDOWN', 40, tableY);
+
+  doc
+    .moveTo(40, tableY + 16)
+    .lineTo(555, tableY + 16)
+    .strokeColor(emeraldColor)
+    .lineWidth(2)
+    .stroke();
+
+  // Table Header
+  const thY = tableY + 24;
+  doc.rect(40, thY, 515, 24).fill('#e2e8f0');
+  doc
+    .fillColor('#0f172a')
+    .fontSize(10)
+    .font('Helvetica-Bold')
+    .text('Description', 50, thY + 7)
+    .text('Payment Method', 250, thY + 7)
+    .text('Status', 380, thY + 7)
+    .text('Amount (PHP)', 470, thY + 7, { align: 'right' });
+
+  // Table Row
+  const trY = thY + 30;
+  doc
+    .fillColor('#1e293b')
+    .fontSize(10)
+    .font('Helvetica')
+    .text(`Pickleball Court Booking (${booking.duration_hours || 1} hrs)`, 50, trY)
+    .text((payment?.payment_method || 'GCash').toUpperCase(), 250, trY)
+    .text((payment?.payment_status || booking.status || 'PAID').toUpperCase(), 380, trY)
+    .font('Helvetica-Bold')
+    .text(`PHP ${(booking.total_amount || 0).toFixed(2)}`, 470, trY, { align: 'right' });
+
+  doc
+    .moveTo(40, trY + 20)
+    .lineTo(555, trY + 20)
+    .strokeColor('#cbd5e1')
+    .lineWidth(1)
+    .stroke();
+
+  // Total Summary Box
+  const totalY = trY + 35;
+  doc.rect(320, totalY, 235, 45).fill('#ecfdf5').stroke('#a7f3d0');
+
+  doc
+    .fillColor('#065f46')
+    .fontSize(11)
+    .font('Helvetica-Bold')
+    .text('TOTAL AMOUNT PAID:', 330, totalY + 14)
+    .fontSize(16)
+    .text(`₱ ${(booking.total_amount || 0).toFixed(2)}`, 440, totalY + 12, { align: 'right' });
+
+  // Storage Retention Notice Footer
+  const footerY = totalY + 75;
+  doc.rect(40, footerY, 515, 55).fill('#fffbeb').stroke('#fde68a');
+
+  doc
+    .fillColor('#92400e')
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text('IMPORTANT RETENTION & RECORD NOTICE:', 50, footerY + 10);
+
+  doc
+    .fillColor('#78350f')
+    .fontSize(8)
+    .font('Helvetica')
+    .text(
+      'Uploaded GCash proof of payment screenshots are stored temporarily and automatically purged after 2–3 days to conserve storage space. Please download and keep this official PDF receipt for your permanent records, as uploaded screenshots will no longer be available after the retention period.',
+      50,
+      footerY + 24,
+      { width: 495, align: 'left' }
+    );
+
+  // Footer Sign-off
+  doc
+    .fillColor('#94a3b8')
+    .fontSize(8)
+    .font('Helvetica-Oblique')
+    .text(`Generated on ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} • House of A's Automated Booking System`, 40, 750, {
+      align: 'center',
+    });
+
+  doc.end();
+};

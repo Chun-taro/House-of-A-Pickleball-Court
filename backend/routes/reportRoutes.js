@@ -7,6 +7,7 @@ const router = express.Router();
 // Dashboard Metrics Endpoint
 router.get('/dashboard', protect, requireRole('admin', 'staff'), getDashboardStats);
 router.get('/dashboard-stats', protect, requireRole('admin', 'staff'), getDashboardStats);
+router.get('/dashboard-summary', protect, requireRole('admin', 'staff'), getDashboardStats);
 
 // Analytics & Reports Endpoint
 router.get('/analytics', protect, requireRole('admin', 'staff'), getReportData);

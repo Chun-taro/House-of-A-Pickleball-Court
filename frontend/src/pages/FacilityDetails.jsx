@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { MapPin, Clock, Trophy, Calendar, Users } from 'lucide-react';
+import { MapPin, Clock, Trophy, Calendar, Users, Car, Bath, ShoppingBag, KeyRound, Tag } from 'lucide-react';
 import courtImg from '../images/pickle ball court.jpg';
 
 export default function FacilityDetails() {
@@ -62,17 +62,86 @@ export default function FacilityDetails() {
 
           <p className="text-slate-200 max-w-3xl leading-relaxed text-sm">{facility.description}</p>
 
-          <div className="flex flex-wrap gap-6 pt-2 text-sm text-slate-200">
+          <div className="flex flex-wrap gap-4 pt-2 text-sm text-slate-200">
             <div className="flex items-center gap-2 bg-slate-900/80 px-3.5 py-2 rounded-xl border border-slate-700">
               <Clock className="w-4 h-4 text-emerald-400" />
-              <span>Hours: {facility.open_time} - {facility.close_time}</span>
+              <span>Operating Hours: 5:00 AM - 11:00 PM</span>
             </div>
             <div className="flex items-center gap-2 bg-slate-900/80 px-3.5 py-2 rounded-xl border border-slate-700">
-              <Trophy className="w-4 h-4 text-emerald-400" />
-              <span>Rate: ₱{facility.hourly_rate} / hr</span>
+              <Tag className="w-4 h-4 text-emerald-400" />
+              <span>Court Rates: 5am-5pm <strong>₱150/hr</strong> | 5pm-11pm <strong>₱200/hr</strong></span>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Amenities Grid */}
+      <div className="glass-card p-6 rounded-3xl space-y-4">
+        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-emerald-600" /> Venue Amenities
+        </h2>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Car className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">Road Parking</h3>
+              <p className="text-[11px] text-slate-500">Accessible parking</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+              <Bath className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">Restroom</h3>
+              <p className="text-[11px] text-slate-500">Clean & private</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">Paddle & Balls</h3>
+              <p className="text-[11px] text-slate-500">For rent or sale</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">Keychains</h3>
+              <p className="text-[11px] text-slate-500">For sale at desk</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* OPEN COURT FREE PLAY PROMO BANNER */}
+      <div className="glass-card p-6 sm:p-8 rounded-3xl space-y-4 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 text-white border-2 border-emerald-500/30">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <span className="text-[10px] uppercase font-black tracking-wider text-emerald-400 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+              Morning Open Session Promo
+            </span>
+            <h3 className="text-2xl font-black text-white mt-1">OPEN COURT FREE PLAY (5:00 AM – 1:00 PM)</h3>
+            <p className="text-xs text-slate-300">Enjoy up to 8 hours of play for just <strong>₱70 / person</strong>. Limited to 16 players. Payment is cash only at house.</p>
+          </div>
+          <div className="bg-slate-900 px-4 py-2 rounded-xl border border-emerald-500/40 text-center shrink-0">
+            <span className="text-xl font-black text-emerald-300 font-mono">₱70</span>
+            <span className="text-[10px] text-slate-400 block font-bold">per person</span>
+          </div>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          During Open Court Free Play, you may play with your own group or join other players at the court. Please check our live website calendar before coming to ensure no exclusive court reservations are scheduled.
+        </p>
       </div>
 
       {/* Courts List */}
@@ -92,7 +161,7 @@ export default function FacilityDetails() {
                     <Users className="w-3.5 h-3.5 text-emerald-600" /> Capacity: {court.capacity} Persons
                   </span>
                   <span>
-                    Rate: <strong className="text-emerald-700 font-bold">₱{court.hourly_rate_override || facility.hourly_rate} / hr</strong>
+                    Rate: <strong className="text-emerald-700 font-bold">5am-5pm ₱150/hr • 5pm-11pm ₱200/hr</strong>
                   </span>
                 </div>
               </div>

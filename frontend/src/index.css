@@ -109,7 +109,7 @@
 }
 
 .fc .fc-timegrid-slot {
-  height: 2.8rem !important;
+  height: 1.95rem !important;
 }
 
 .fc .fc-col-header-cell-cushion {
@@ -123,6 +123,11 @@
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure whole calendar is displayed cleanly without internal UI scrollbars */
+.fc .fc-scroller {
+  overflow-y: hidden !important;
 }
 
 /* Mobile responsive fullcalendar overrides */

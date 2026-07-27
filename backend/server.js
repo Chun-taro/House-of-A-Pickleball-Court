@@ -12,8 +12,25 @@ import scheduleRoutes from './routes/scheduleRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import { startCleanupScheduler } from './services/cleanupService.js';
 
 const app = express();
+
+// Start standalone server if not on Vercel
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  connectDB()
+    .then(() => {
+      // Initialize automatic GCash proof cleanup scheduler (2-3 day retention)
+      startCleanupScheduler();
+      app.listen(PORT, () => {
+        console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('MongoDB Startup Error:', err.message);
+    });
+}
 
 // 1. CORS Middleware (Must be FIRST to handle CORS preflight & error responses)
 app.use(cors());
@@ -57,13 +74,5 @@ app.use((err, req, res, next) => {
   console.error('Express Global Error:', err);
   res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
 });
-
-// Start standalone server if not on Vercel
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  });
-}
 
 export default app;

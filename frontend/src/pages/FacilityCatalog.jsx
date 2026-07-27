@@ -43,8 +43,8 @@ export default function FacilityCatalog() {
                     alt={fac.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-emerald-700 shadow-xs border border-emerald-200">
-                    ₱{fac.hourly_rate} / hr
+                  <div className="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-extrabold text-emerald-400 shadow-xs border border-slate-700">
+                    5am-5pm ₱150/hr • 5pm-11pm ₱200/hr
                   </div>
                 </div>
 

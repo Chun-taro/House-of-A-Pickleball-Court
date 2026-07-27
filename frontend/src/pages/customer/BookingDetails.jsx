@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
-import { Calendar, Clock, Trophy, MapPin, CreditCard, ArrowLeft, XCircle } from 'lucide-react';
+import { Calendar, Clock, Trophy, MapPin, CreditCard, ArrowLeft, XCircle, Download, Info, FileText } from 'lucide-react';
 
 export default function BookingDetails() {
   const { id } = useParams();
@@ -108,22 +108,76 @@ export default function BookingDetails() {
           </div>
         </div>
 
-        {booking.notes && (
+        {payment?.notes && (
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700">
             <strong className="text-slate-900">Notes:</strong> {booking.notes}
           </div>
         )}
 
-        {['pending', 'approved'].includes(booking.status) && (
-          <div className="pt-4 border-t border-slate-200 flex justify-end">
+        {/* GCash Proof of Payment Details & Retention Notice */}
+        {payment?.payment_method === 'gcash' && (
+          <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-4 text-xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-blue-200 pb-3">
+              <div>
+                <h3 className="font-extrabold text-blue-950 text-sm flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-blue-700" /> GCash Proof of Payment Status
+                </h3>
+                <p className="text-blue-700 text-[11px]">Transaction Reference: <strong className="text-blue-950">{payment.reference_number || 'Pending verification'}</strong></p>
+              </div>
+
+              {payment.proof_of_payment_url ? (
+                <a
+                  href={payment.proof_of_payment_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5" /> View Uploaded Screenshot
+                </a>
+              ) : payment.proof_status === 'expired_deleted' ? (
+                <span className="px-3 py-1 rounded-xl bg-slate-200 text-slate-700 font-bold text-[11px] border border-slate-300">
+                  Proof Purged (Retention Expired)
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-xl bg-amber-100 text-amber-900 font-bold text-[11px] border border-amber-300">
+                  No Proof Uploaded
+                </span>
+              )}
+            </div>
+
+            {/* Retention Warning Notice */}
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 text-[11px] leading-relaxed flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-extrabold text-amber-900 block mb-0.5">Retention Policy Notice:</strong>
+                <span>
+                  Uploaded proof of payment screenshots are stored temporarily and permanently deleted after 2–3 days to conserve storage space. Please download and keep your PDF receipt for your records, as the uploaded screenshot will no longer be available after the retention period.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons: PDF Receipt Download & Cancellation */}
+        <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <a
+            href={`/api/bookings/${booking._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" /> Download Official PDF Receipt
+          </a>
+
+          {['pending', 'approved'].includes(booking.status) && (
             <button
               onClick={() => setShowCancelModal(true)}
               className="px-4 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1.5"
             >
               <XCircle className="w-4 h-4" /> Cancel Booking
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Cancel Modal */}

@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
-import { Calendar, Clock, Trophy, MapPin, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, Trophy, MapPin, ArrowRight, Download } from 'lucide-react';
 
 export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     axios.get('/api/bookings/my-bookings')
@@ -15,7 +16,12 @@ export default function MyBookings() {
           setBookings(res.data.bookings);
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error('MyBookings fetch error:', err);
+        if (err.response?.status === 401) {
+          setAuthError(true);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -37,6 +43,21 @@ export default function MyBookings() {
 
       {loading ? (
         <div className="py-12 text-center text-slate-500">Loading your bookings...</div>
+      ) : authError ? (
+        <div className="glass-card p-8 rounded-3xl text-center space-y-4 max-w-lg mx-auto border border-amber-200 bg-amber-50/50">
+          <h3 className="text-lg font-extrabold text-amber-900">Session Expired or Login Required</h3>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            Your login session is invalid or has expired (e.g. database re-seeded). Please sign in to view your court reservations.
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md"
+            >
+              Sign In to Your Account
+            </Link>
+          </div>
+        </div>
       ) : bookings.length === 0 ? (
         <div className="glass-card p-12 rounded-3xl text-center space-y-4">
           <Trophy className="w-12 h-12 text-slate-400 mx-auto" />
@@ -85,6 +106,16 @@ export default function MyBookings() {
                   <span className="text-xs text-slate-500 block">Total Amount</span>
                   <span className="text-lg font-extrabold text-emerald-700">₱{b.total_amount?.toFixed(2)}</span>
                 </div>
+
+                <a
+                  href={`/api/bookings/${b._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-xl text-xs font-extrabold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors flex items-center gap-1"
+                  title="Download Official PDF Receipt"
+                >
+                  <Download className="w-3.5 h-3.5" /> PDF Receipt
+                </a>
 
                 <Link
                   to={`/my-bookings/${b._id}`}

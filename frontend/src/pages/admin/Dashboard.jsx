@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
-import { BookOpen, Clock, CheckCircle2, DollarSign, Building2, Users } from 'lucide-react';
+import { BookOpen, Clock, CheckCircle2, Banknote, Building2, Users } from 'lucide-react';
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('/api/reports/dashboard-stats')
+    axios.get('/api/reports/dashboard-summary')
       .then((res) => {
         if (res.data.success) {
-          setData(res.data);
+          setStats(res.data.stats);
+          setRecentBookings(res.data.recentBookings);
         }
       })
       .catch((err) => console.error(err))
@@ -22,31 +24,29 @@ export default function Dashboard() {
     return <div className="p-8 text-center text-slate-500">Loading dashboard metrics...</div>;
   }
 
-  const { stats, recentBookings } = data || {};
-
   return (
-    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+    <div className="p-4 sm:p-8 space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Admin Dashboard</h1>
-        <p className="text-xs sm:text-sm text-slate-600">House of A's Pickleball Court operational overview</p>
+        <p className="text-xs sm:text-sm text-slate-600">Overview of House of A's Court metrics, revenue, and recent schedule activity</p>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Facilities</span>
+            <Building2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats?.totalFacilities || 0}</p>
+        </div>
+
         <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Bookings</span>
             <BookOpen className="w-5 h-5 text-emerald-600 shrink-0" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats?.totalBookings || 0}</p>
-        </div>
-
-        <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Pending Approval</span>
-            <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-          </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-amber-600">{stats?.pendingBookings || 0}</p>
         </div>
 
         <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
@@ -60,7 +60,7 @@ export default function Dashboard() {
         <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Revenue</span>
-            <DollarSign className="w-5 h-5 text-emerald-600 shrink-0" />
+            <Banknote className="w-5 h-5 text-emerald-600 shrink-0" />
           </div>
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">₱{stats?.totalRevenue?.toFixed(2) || '0.00'}</p>
         </div>

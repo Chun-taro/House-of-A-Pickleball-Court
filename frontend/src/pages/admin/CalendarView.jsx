@@ -96,11 +96,20 @@ export default function CalendarView() {
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay',
               }}
+              buttonText={{
+                today: 'Today',
+                month: 'Month',
+                week: 'Week',
+                day: 'Day',
+              }}
+              dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
               events={events}
               slotMinTime="05:00:00"
               slotMaxTime="23:00:00"
+              slotDuration="01:00:00"
               allDaySlot={false}
               height="auto"
+              contentHeight="auto"
             />
           </div>
         )}
