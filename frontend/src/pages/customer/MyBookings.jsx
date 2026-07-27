@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
+import PdfReceiptModal from '../../components/PdfReceiptModal';
 import { Calendar, Clock, Trophy, MapPin, ArrowRight, Download } from 'lucide-react';
 
 export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
+  const [receiptBooking, setReceiptBooking] = useState(null);
 
   useEffect(() => {
     axios.get('/api/bookings/my-bookings')
@@ -26,20 +28,21 @@ export default function MyBookings() {
   }, []);
 
   return (
-    <div className="space-y-6 py-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">My Reservations</h1>
-          <p className="text-sm text-slate-600">View and manage your House of A's Pickleball Court bookings</p>
-        </div>
+    <>
+      <div className="space-y-6 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900">My Reservations</h1>
+            <p className="text-sm text-slate-600">View and manage your House of A's Pickleball Court bookings</p>
+          </div>
 
-        <Link
-          to="/booking/wizard"
-          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors flex items-center gap-2 shadow-sm"
-        >
-          <Calendar className="w-4 h-4" /> Book Court Slot
-        </Link>
-      </div>
+          <Link
+            to="/booking/wizard"
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <Calendar className="w-4 h-4" /> Book Court Slot
+          </Link>
+        </div>
 
       {loading ? (
         <div className="py-12 text-center text-slate-500">Loading your bookings...</div>
@@ -107,15 +110,13 @@ export default function MyBookings() {
                   <span className="text-lg font-extrabold text-emerald-700">₱{b.total_amount?.toFixed(2)}</span>
                 </div>
 
-                <a
-                  href={`/api/bookings/${b._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setReceiptBooking(b)}
                   className="px-3 py-2 rounded-xl text-xs font-extrabold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors flex items-center gap-1"
-                  title="Download Official PDF Receipt"
+                  title="Preview & Download Official PDF Receipt"
                 >
                   <Download className="w-3.5 h-3.5" /> PDF Receipt
-                </a>
+                </button>
 
                 <Link
                   to={`/my-bookings/${b._id}`}
@@ -128,6 +129,13 @@ export default function MyBookings() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+
+      <PdfReceiptModal
+        booking={receiptBooking}
+        isOpen={!!receiptBooking}
+        onClose={() => setReceiptBooking(null)}
+      />
+    </>
   );
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import ManualBookingModal from '../../components/ManualBookingModal';
+import PdfReceiptModal from '../../components/PdfReceiptModal';
 import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock, ShieldAlert } from 'lucide-react';
 
 export default function BookingsList() {
@@ -12,6 +13,7 @@ export default function BookingsList() {
   const [alertMessage, setAlertMessage] = useState('');
   const [selectedProof, setSelectedProof] = useState(null);
   const [proofImgError, setProofImgError] = useState(false);
+  const [receiptBooking, setReceiptBooking] = useState(null);
 
   const fetchBookings = () => {
     let url = '/api/bookings/admin/all';
@@ -146,15 +148,13 @@ export default function BookingsList() {
                           </button>
                         )}
 
-                        <a
-                          href={`/api/bookings/${b._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition-colors"
-                          title="Download PDF Receipt"
+                        <button
+                          onClick={() => setReceiptBooking(b)}
+                          className="p-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-lg text-[10px] font-bold transition-colors border border-transparent hover:border-emerald-200"
+                          title="Preview & Download PDF Receipt"
                         >
                           <Download className="w-3.5 h-3.5" />
-                        </a>
+                        </button>
 
                         {b.status === 'pending' && (
                           <>
@@ -266,6 +266,13 @@ export default function BookingsList() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleManualSuccess}
+      />
+
+      {/* PDF Receipt Preview Modal */}
+      <PdfReceiptModal
+        booking={receiptBooking}
+        isOpen={!!receiptBooking}
+        onClose={() => setReceiptBooking(null)}
       />
     </div>
   );

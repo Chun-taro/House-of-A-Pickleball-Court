@@ -651,8 +651,9 @@ export const downloadReceiptPdf = async (req, res) => {
 
     const payment = await Payment.findOne({ booking_id: booking._id });
 
+    const disposition = req.query.inline === 'true' ? 'inline' : 'attachment';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Receipt-${booking.booking_code}.pdf`);
+    res.setHeader('Content-Disposition', `${disposition}; filename=Receipt-${booking.booking_code}.pdf`);
 
     generatePdfReceipt(
       {

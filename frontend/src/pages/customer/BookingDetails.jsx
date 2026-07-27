@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
+import PdfReceiptModal from '../../components/PdfReceiptModal';
 import { Calendar, Clock, Trophy, MapPin, CreditCard, ArrowLeft, XCircle, Download, Info, FileText } from 'lucide-react';
 
 export default function BookingDetails() {
@@ -12,6 +13,7 @@ export default function BookingDetails() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [error, setError] = useState('');
 
   const fetchDetails = () => {
@@ -60,7 +62,8 @@ export default function BookingDetails() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 py-6">
+    <>
+      <div className="max-w-3xl mx-auto space-y-6 py-6">
       <Link to="/my-bookings" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-emerald-700">
         <ArrowLeft className="w-4 h-4" /> Back to My Bookings
       </Link>
@@ -160,14 +163,12 @@ export default function BookingDetails() {
 
         {/* Action Buttons: PDF Receipt Download & Cancellation */}
         <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-          <a
-            href={`/api/bookings/${booking._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => setReceiptOpen(true)}
             className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2"
           >
-            <Download className="w-4 h-4" /> Download Official PDF Receipt
-          </a>
+            <Download className="w-4 h-4" /> View & Download PDF Receipt
+          </button>
 
           {['pending', 'approved'].includes(booking.status) && (
             <button
@@ -218,6 +219,13 @@ export default function BookingDetails() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      <PdfReceiptModal
+        booking={booking}
+        isOpen={receiptOpen}
+        onClose={() => setReceiptOpen(false)}
+      />
+    </>
   );
 }

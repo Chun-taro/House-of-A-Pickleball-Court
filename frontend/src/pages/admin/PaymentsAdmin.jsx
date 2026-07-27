@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
+import PdfReceiptModal from '../../components/PdfReceiptModal';
 import { CreditCard, CheckCircle2, XCircle, FileImage, Download, X, Eye, ShieldAlert, Clock } from 'lucide-react';
 
 export default function PaymentsAdmin() {
@@ -8,6 +9,7 @@ export default function PaymentsAdmin() {
   const [loading, setLoading] = useState(true);
   const [selectedProof, setSelectedProof] = useState(null);
   const [proofImgError, setProofImgError] = useState(false);
+  const [receiptBooking, setReceiptBooking] = useState(null);
 
   const fetchPayments = () => {
     axios.get('/api/payments')
@@ -36,7 +38,8 @@ export default function PaymentsAdmin() {
   };
 
   return (
-    <div className="p-4 sm:p-8 space-y-6">
+    <>
+      <div className="p-4 sm:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Payments & Verification</h1>
@@ -108,15 +111,13 @@ export default function PaymentsAdmin() {
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {p.booking_id?._id && (
-                          <a
-                            href={`/api/bookings/${p.booking_id._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition-colors"
-                            title="Download PDF Receipt"
+                          <button
+                            onClick={() => setReceiptBooking({ _id: p.booking_id._id, booking_code: p.booking_id.booking_code, status: p.booking_id.status })}
+                            className="p-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 rounded-lg text-[10px] font-bold transition-colors border border-transparent hover:border-emerald-200"
+                            title="Preview & Download PDF Receipt"
                           >
                             <Download className="w-3.5 h-3.5" />
-                          </a>
+                          </button>
                         )}
 
                         {p.payment_status !== 'paid' && (
@@ -212,6 +213,14 @@ export default function PaymentsAdmin() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* PDF Receipt Preview Modal */}
+      <PdfReceiptModal
+        booking={receiptBooking}
+        isOpen={!!receiptBooking}
+        onClose={() => setReceiptBooking(null)}
+      />
+    </>
   );
 }

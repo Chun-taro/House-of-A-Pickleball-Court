@@ -40,31 +40,47 @@ export const generatePdfReceipt = (data, outputStream) => {
 
   doc.moveDown(4);
 
+  // Approval Status Determination
+  const isApproved = ['approved', 'checked_in', 'completed'].includes(booking.status);
+  const statusBannerBg = isApproved ? '#ecfdf5' : '#fffbeb';
+  const statusBannerBorder = isApproved ? '#a7f3d0' : '#fde68a';
+  const statusBannerText = isApproved ? '#065f46' : '#92400e';
+  const statusBannerLabel = isApproved ? 'VERIFIED & APPROVED - GOOD TO GO' : 'PENDING ADMIN APPROVAL - NOT YET VERIFIED';
+
   // Receipt Meta Grid
-  const startY = 130;
-  doc.rect(40, startY, 515, 60).fill(lightBgColor).stroke('#cbd5e1');
+  const startY = 125;
+  doc.rect(40, startY, 515, 50).fill(lightBgColor).stroke('#cbd5e1');
 
   doc
     .fillColor(darkSlateColor)
-    .fontSize(10)
+    .fontSize(9)
     .font('Helvetica-Bold')
-    .text(`Booking Reference Code:`, 55, startY + 12)
+    .text(`Booking Reference Code:`, 55, startY + 8)
     .fillColor(emeraldColor)
-    .fontSize(14)
-    .text(booking.booking_code || 'HOA-RECEIPT', 55, startY + 28);
+    .fontSize(13)
+    .text(booking.booking_code || 'HOA-RECEIPT', 55, startY + 22);
 
   doc
     .fillColor(darkSlateColor)
-    .fontSize(10)
+    .fontSize(9)
     .font('Helvetica-Bold')
-    .text(`Transaction Reference:`, 320, startY + 12)
+    .text(`Transaction Reference:`, 320, startY + 8)
     .fillColor('#1e293b')
-    .fontSize(11)
+    .fontSize(10)
     .font('Helvetica')
-    .text(payment?.reference_number || `PAY-${booking.booking_code}`, 320, startY + 28);
+    .text(payment?.reference_number || `PAY-${booking.booking_code}`, 320, startY + 22);
+
+  // Verification Status Banner
+  const statusBoxY = startY + 56;
+  doc.rect(40, statusBoxY, 515, 24).fill(statusBannerBg).stroke(statusBannerBorder);
+  doc
+    .fillColor(statusBannerText)
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text(`OFFICIAL RESERVATION STATUS:  ${statusBannerLabel}`, 50, statusBoxY + 7, { align: 'center' });
 
   // Customer Information Section
-  const custY = startY + 80;
+  const custY = statusBoxY + 38;
   doc
     .fillColor(darkSlateColor)
     .fontSize(12)
