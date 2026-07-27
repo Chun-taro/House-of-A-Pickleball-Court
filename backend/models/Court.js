@@ -12,4 +12,4 @@ const courtSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Court', courtSchema);
+export default mongoose.models.Court || mongoose.model('Court', courtSchema);

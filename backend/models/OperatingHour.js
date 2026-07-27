@@ -11,4 +11,4 @@ const operatingHourSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('OperatingHour', operatingHourSchema);
+export default mongoose.models.OperatingHour || mongoose.model('OperatingHour', operatingHourSchema);
