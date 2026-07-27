@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dns from 'node:dns';
 
-// Fix DNS resolution for MongoDB Atlas SRV connection strings on Windows networks only
+// Fix DNS resolution for MongoDB Atlas SRV connection strings on Windows networks
 if (process.platform === 'win32') {
   try {
     dns.setDefaultResultOrder('ipv4first');
@@ -11,26 +11,43 @@ if (process.platform === 'win32') {
   }
 }
 
-let cachedDb = null;
+// Global cached connection for Vercel Serverless Function re-use
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGO_URI || 'mongodb+srv://houseofaspickleballcourt_db_user:oGCcoxN7lrp6PfFS@cluster0.pgvk5si.mongodb.net/house_of_as_pickleball?retryWrites=true&w=majority&appName=Cluster0';
+  const mongoUri =
+    process.env.MONGO_URI ||
+    'mongodb+srv://houseofaspickleballcourt_db_user:oGCcoxN7lrp6PfFS@cluster0.pgvk5si.mongodb.net/house_of_as_pickleball?retryWrites=true&w=majority&appName=Cluster0';
 
-  if (cachedDb && mongoose.connection.readyState >= 1) {
-    return cachedDb;
+  if (cached.conn && mongoose.connection.readyState >= 1) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 10000,
+    };
+
+    cached.promise = mongoose.connect(mongoUri, opts).then((m) => {
+      console.log(`MongoDB Atlas Connected: ${m.connection.host}`);
+      return m;
+    });
   }
 
   try {
-    const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 10000,
-    });
-    cachedDb = conn;
-    console.log(`MongoDB Atlas Connected: ${conn.connection.host}`);
-    return conn;
-  } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
-    throw error;
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error(`MongoDB Connection Error: ${e.message}`);
+    throw e;
   }
+
+  return cached.conn;
 };
 
 export default connectDB;
