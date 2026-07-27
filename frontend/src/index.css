@@ -56,6 +56,30 @@
     box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.45);
     transform: translateY(-1px);
   }
+
+  /* Pickleball Court Design System Utilities */
+  .pickleball-badge-yellow {
+    background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+    color: #0f172a;
+    font-weight: 900;
+  }
+
+  .pickleball-badge-lime {
+    background: linear-gradient(135deg, #a3e635 0%, #84cc16 100%);
+    color: #022c22;
+    font-weight: 900;
+  }
+
+  .pickleball-lime-glow {
+    box-shadow: 0 0 25px rgba(163, 230, 53, 0.35), 0 0 12px rgba(16, 185, 129, 0.25);
+  }
+
+  .court-grid-pattern {
+    background-image: radial-gradient(rgba(132, 204, 22, 0.12) 1.5px, transparent 1.5px),
+                      radial-gradient(rgba(16, 185, 129, 0.08) 1.5px, transparent 1.5px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+  }
 }
 
 /* Custom FullCalendar Styling */

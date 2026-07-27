@@ -36,12 +36,14 @@ export default function Navbar() {
               </div>
             </div>
             <div>
-              <span className="text-base sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-1.5">
+              <span className="text-base sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
                 House of A's
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="px-2 py-0.5 rounded-md bg-lime-400 text-slate-950 text-[9px] sm:text-[10px] font-black tracking-wider uppercase shadow-sm">
+                  PICKLEBALL
+                </span>
               </span>
-              <span className="block text-[9px] sm:text-[10px] uppercase tracking-widest font-bold text-emerald-400/90">
-                Pickleball Venue • Malaybalay
+              <span className="block text-[9px] sm:text-[10px] uppercase tracking-widest font-bold text-emerald-300">
+                Linabo • Malaybalay City
               </span>
             </div>
           </Link>

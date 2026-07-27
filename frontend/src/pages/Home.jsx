@@ -48,8 +48,8 @@ export default function Home() {
           </div>
 
           <div>
-            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-900/85 backdrop-blur-md text-emerald-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider border border-emerald-800/60 shadow-md">
-              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Malaybalay’s Premier Pickleball Venue
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-900/90 backdrop-blur-md text-emerald-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider border border-emerald-500/50 shadow-md">
+              <span className="px-2 py-0.5 rounded-full bg-lime-400 text-slate-950 font-black text-[9px]">PICKLEBALL</span> Malaybalay’s Premier Pickleball Venue
             </div>
           </div>
           
@@ -58,16 +58,16 @@ export default function Home() {
           </h1>
           
           <p className="text-sm sm:text-lg text-slate-100 max-w-2xl mx-auto font-semibold leading-relaxed drop-shadow-sm">
-            Purok-1, Linabo, Malaybalay City, Bukidnon. Book our private single court for casual matches, family games, or competitive pickleball sessions.
+            Purok-1, Linabo, Malaybalay City, Bukidnon. Book our private single court for casual matches, dink sessions, family games, or competitive pickleball matches.
           </p>
 
           {/* Court Rates Banner in Hero */}
-          <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 px-5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-emerald-500/40 shadow-lg text-xs sm:text-sm">
-            <span className="font-extrabold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
-              <Tag className="w-4 h-4 text-emerald-400" /> Court Rates:
+          <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 px-5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-lime-400/40 shadow-xl text-xs sm:text-sm">
+            <span className="font-extrabold text-lime-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-lime-400" /> Court Rates:
             </span>
             <span className="bg-slate-800 text-slate-100 font-bold px-3 py-1 rounded-xl border border-slate-700">
-              5:00 AM - 5:00 PM: <span className="text-emerald-400 font-extrabold">₱150/hr</span>
+              5:00 AM - 5:00 PM: <span className="text-lime-400 font-extrabold">₱150/hr</span>
             </span>
             <span className="bg-slate-800 text-slate-100 font-bold px-3 py-1 rounded-xl border border-slate-700">
               5:00 PM - 11:00 PM: <span className="text-emerald-400 font-extrabold">₱200/hr</span>
