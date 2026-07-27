@@ -2,10 +2,17 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Ensure proofs uploads directory exists
-const uploadDir = path.join(process.cwd(), 'uploads', 'proofs');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure proofs uploads directory exists safely (use /tmp on Vercel serverless environment)
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'uploads', 'proofs')
+  : path.join(process.cwd(), 'uploads', 'proofs');
+
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn('Upload directory creation warning:', err.message);
 }
 
 // Storage configuration

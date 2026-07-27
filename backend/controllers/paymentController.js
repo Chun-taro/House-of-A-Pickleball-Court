@@ -172,17 +172,22 @@ export const uploadProofImage = async (req, res) => {
   }
 };
 
-// Serve Proof Image (Check file existence in uploads/proofs)
+// Serve Proof Image (Check file existence in /tmp or uploads/proofs)
 export const serveProofImage = async (req, res) => {
   try {
     const filename = req.params.filename;
-    const filePath = path.join(process.cwd(), 'uploads', 'proofs', filename);
+    const tmpPath = path.join('/tmp', 'uploads', 'proofs', filename);
+    const cwdPath = path.join(process.cwd(), 'uploads', 'proofs', filename);
 
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: 'Proof image file has been purged or retention period expired.' });
+    if (fs.existsSync(tmpPath)) {
+      return res.sendFile(tmpPath);
     }
 
-    return res.sendFile(filePath);
+    if (fs.existsSync(cwdPath)) {
+      return res.sendFile(cwdPath);
+    }
+
+    return res.status(404).json({ success: false, message: 'Proof image file has been purged or retention period expired.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
