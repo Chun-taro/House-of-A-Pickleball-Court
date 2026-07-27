@@ -31,8 +31,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2.5 sm:space-x-3 group">
             <div className="relative shrink-0">
-              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-2xl blur-xs opacity-60 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-700/80 flex items-center justify-center shadow-md overflow-hidden p-0.5">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-white border border-slate-700/80 flex items-center justify-center shadow-sm overflow-hidden p-0.5">
                 <img src={logoImg} alt="House of A's Logo" className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
               </div>
             </div>

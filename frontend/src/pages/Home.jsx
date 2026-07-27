@@ -42,8 +42,7 @@ export default function Home() {
 
         <div className="relative z-10 max-w-3xl mx-auto space-y-6">
           <div className="relative inline-block mb-1">
-            <div className="absolute -inset-2 bg-emerald-500/30 rounded-3xl blur-md"></div>
-            <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white p-2 border border-slate-700/80 shadow-2xl overflow-hidden mx-auto">
+            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white p-2 border border-slate-700/60 shadow-xl overflow-hidden mx-auto">
               <img src={logoImg} alt="House of A's Logo" className="w-full h-full object-contain" />
             </div>
           </div>
