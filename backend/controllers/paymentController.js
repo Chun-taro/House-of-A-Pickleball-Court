@@ -23,23 +23,31 @@ export const getPayments = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    const mapped = payments.map((p) => ({
-      ...p.toObject(),
-      id: p._id,
-      _id: p._id,
-      user_id: p.user_id ? { _id: p.user_id._id, name: p.user_id.name, email: p.user_id.email, phone: p.user_id.phone } : null,
-      booking_id: p.booking_id
-        ? {
-            _id: p.booking_id._id,
-            booking_code: p.booking_id.booking_code,
-            booking_date: p.booking_id.booking_date,
-            start_time: p.booking_id.start_time,
-            end_time: p.booking_id.end_time,
-            status: p.booking_id.status,
-            facility_id: p.booking_id.facility_id ? { name: p.booking_id.facility_id.name } : null,
-          }
-        : null,
-    }));
+    const mapped = payments.map((p) => {
+      let proofUrl = p.proof_of_payment_url;
+      if (proofUrl && proofUrl.endsWith('/undefined')) {
+        proofUrl = `/api/payments/proof/${p._id}`;
+        Payment.findByIdAndUpdate(p._id, { proof_of_payment_url: proofUrl }).catch((e) => console.error('Proof URL repair error:', e));
+      }
+      return {
+        ...p.toObject(),
+        id: p._id,
+        _id: p._id,
+        proof_of_payment_url: proofUrl,
+        user_id: p.user_id ? { _id: p.user_id._id, name: p.user_id.name, email: p.user_id.email, phone: p.user_id.phone } : null,
+        booking_id: p.booking_id
+          ? {
+              _id: p.booking_id._id,
+              booking_code: p.booking_id.booking_code,
+              booking_date: p.booking_id.booking_date,
+              start_time: p.booking_id.start_time,
+              end_time: p.booking_id.end_time,
+              status: p.booking_id.status,
+              facility_id: p.booking_id.facility_id ? { name: p.booking_id.facility_id.name } : null,
+            }
+          : null,
+      };
+    });
 
     return res.json({ success: true, payments: mapped });
   } catch (error) {
@@ -186,6 +194,10 @@ export const uploadProofImage = async (req, res) => {
 export const serveProofImage = async (req, res) => {
   try {
     const targetId = req.params.filename;
+
+    if (!targetId || targetId === 'undefined') {
+      return res.status(404).json({ success: false, message: 'Invalid proof image identifier.' });
+    }
 
     // 1. Query Payment by Mongo ObjectId or proof_filename
     let payment = await Payment.findById(targetId).catch(() => null);

@@ -7,6 +7,7 @@ export default function PaymentsAdmin() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProof, setSelectedProof] = useState(null);
+  const [proofImgError, setProofImgError] = useState(false);
 
   const fetchPayments = () => {
     axios.get('/api/payments')
@@ -79,7 +80,10 @@ export default function PaymentsAdmin() {
                     <td className="p-3">
                       {p.proof_of_payment_url ? (
                         <button
-                          onClick={() => setSelectedProof(p)}
+                          onClick={() => {
+                            setProofImgError(false);
+                            setSelectedProof(p);
+                          }}
                           className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold rounded-lg text-[10px] inline-flex items-center gap-1 transition-colors"
                         >
                           <Eye className="w-3 h-3 text-blue-600" /> View Proof
@@ -163,12 +167,21 @@ export default function PaymentsAdmin() {
             </div>
 
             {/* Image Preview Container */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[60vh] flex items-center justify-center p-2">
-              <img
-                src={selectedProof.proof_of_payment_url}
-                alt="GCash Proof Screenshot"
-                className="max-h-[55vh] w-auto object-contain rounded-xl"
-              />
+            <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[60vh] flex items-center justify-center p-2 min-h-[160px]">
+              {proofImgError ? (
+                <div className="py-8 text-center text-slate-400 space-y-2">
+                  <ShieldAlert className="w-8 h-8 mx-auto text-amber-500/90 mb-1" />
+                  <p className="font-semibold text-xs text-slate-200">Proof Screenshot Unavailable</p>
+                  <p className="text-[10px] text-slate-400 max-w-xs mx-auto">This image file has either expired (purged after 72 hours) or is unavailable.</p>
+                </div>
+              ) : (
+                <img
+                  src={selectedProof.proof_of_payment_url}
+                  alt="GCash Proof Screenshot"
+                  onError={() => setProofImgError(true)}
+                  className="max-h-[55vh] w-auto object-contain rounded-xl"
+                />
+              )}
             </div>
 
             {/* Retention Notice */}

@@ -45,6 +45,7 @@ export const runProofCleanup = async () => {
 
       // Update DB record to clear image reference
       payment.proof_of_payment_url = null;
+      payment.proof_image_base64 = null;
       payment.proof_filename = null;
       payment.proof_status = 'expired_deleted';
       await payment.save();

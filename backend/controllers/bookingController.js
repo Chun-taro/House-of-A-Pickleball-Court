@@ -244,8 +244,12 @@ export const createBooking = async (req, res) => {
     const refNum = req.body.reference_number || (isPaidOnline ? `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null);
 
     const hasProofFile = !!req.file;
-    const proofFilename = hasProofFile ? req.file.filename : null;
-    const proofUrl = hasProofFile ? `/api/payments/proof/${req.file.filename}` : null;
+    let base64Image = null;
+    if (hasProofFile && req.file.buffer) {
+      base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const proofFilename = hasProofFile ? `proof_${uniqueSuffix}` : null;
     const proofUploadedAt = hasProofFile ? new Date() : null;
     const proofExpiresAt = hasProofFile ? new Date(Date.now() + 72 * 60 * 60 * 1000) : null;
 
@@ -257,12 +261,18 @@ export const createBooking = async (req, res) => {
       payment_status: payment_method === 'cash' ? 'unpaid' : (hasProofFile ? 'unpaid' : (isPaidOnline ? 'paid' : 'unpaid')),
       reference_number: refNum,
       paid_at: (isPaidOnline && !hasProofFile) ? new Date() : null,
+      proof_image_base64: base64Image,
       proof_filename: proofFilename,
-      proof_of_payment_url: proofUrl,
+      proof_of_payment_url: null,
       proof_uploaded_at: proofUploadedAt,
       proof_expires_at: proofExpiresAt,
       proof_status: hasProofFile ? 'uploaded' : 'none',
     });
+
+    if (hasProofFile) {
+      payment.proof_of_payment_url = `/api/payments/proof/${payment._id}`;
+      await payment.save();
+    }
 
     // Await confirmation email for Vercel Serverless environment
     await sendBookingConfirmationEmail({

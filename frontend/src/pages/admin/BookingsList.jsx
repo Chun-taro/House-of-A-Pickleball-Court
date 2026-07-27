@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import ManualBookingModal from '../../components/ManualBookingModal';
-import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock } from 'lucide-react';
+import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock, ShieldAlert } from 'lucide-react';
 
 export default function BookingsList() {
   const [bookings, setBookings] = useState([]);
@@ -11,6 +11,7 @@ export default function BookingsList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [selectedProof, setSelectedProof] = useState(null);
+  const [proofImgError, setProofImgError] = useState(false);
 
   const fetchBookings = () => {
     let url = '/api/bookings/admin/all';
@@ -134,7 +135,10 @@ export default function BookingsList() {
                       <div className="flex items-center justify-end gap-1.5">
                         {b.payment?.proof_of_payment_url && (
                           <button
-                            onClick={() => setSelectedProof(b)}
+                            onClick={() => {
+                              setProofImgError(false);
+                              setSelectedProof(b);
+                            }}
                             className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold rounded-lg text-[10px] flex items-center gap-1 transition-colors"
                             title="View GCash Proof Screenshot"
                           >
@@ -217,12 +221,21 @@ export default function BookingsList() {
             </div>
 
             {/* Image Preview Container */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[60vh] flex items-center justify-center p-2">
-              <img
-                src={selectedProof.payment?.proof_of_payment_url}
-                alt="GCash Proof Screenshot"
-                className="max-h-[55vh] w-auto object-contain rounded-xl"
-              />
+            <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[60vh] flex items-center justify-center p-2 min-h-[160px]">
+              {proofImgError ? (
+                <div className="py-8 text-center text-slate-400 space-y-2">
+                  <ShieldAlert className="w-8 h-8 mx-auto text-amber-500/90 mb-1" />
+                  <p className="font-semibold text-xs text-slate-200">Proof Screenshot Unavailable</p>
+                  <p className="text-[10px] text-slate-400 max-w-xs mx-auto">This image file has either expired (purged after 72 hours) or is unavailable.</p>
+                </div>
+              ) : (
+                <img
+                  src={selectedProof.payment?.proof_of_payment_url}
+                  alt="GCash Proof Screenshot"
+                  onError={() => setProofImgError(true)}
+                  className="max-h-[55vh] w-auto object-contain rounded-xl"
+                />
+              )}
             </div>
 
             {/* Retention Notice */}
