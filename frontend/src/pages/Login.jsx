@@ -78,8 +78,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex items-center justify-center py-12">
-      <div className="w-full max-w-md glass-card p-8 rounded-3xl space-y-6 shadow-md border border-slate-300">
+    <div className="min-h-[calc(100vh-12rem)] flex items-center justify-center py-6 sm:py-12 px-3 sm:px-0">
+      <div className="w-full max-w-md glass-card p-5 sm:p-8 rounded-3xl space-y-6 shadow-md border border-slate-300">
         
         {/* Header Logo */}
         <div className="text-center space-y-2">

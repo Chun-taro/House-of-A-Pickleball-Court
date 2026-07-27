@@ -151,11 +151,11 @@ export default function BookingWizard() {
         </div>
       )}
 
-      <form onSubmit={handleSubmitBooking} className="space-y-8">
+      <form onSubmit={handleSubmitBooking} className="space-y-6 sm:space-y-8">
         {/* Step 1: Select Facility & Court */}
-        <div className="glass-card p-6 rounded-3xl space-y-6">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
-            <Trophy className="w-5 h-5 text-emerald-600" /> Step 1: Select Facility & Court
+        <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-5">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
+            <Trophy className="w-5 h-5 text-emerald-600 shrink-0" /> Step 1: Select Facility & Court
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -193,9 +193,9 @@ export default function BookingWizard() {
         </div>
 
         {/* Step 2: Choose Duration, Date & Time Slot */}
-        <div className="glass-card p-6 rounded-3xl space-y-6">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
-            <Calendar className="w-5 h-5 text-emerald-600" /> Step 2: Booking Duration & Time Slot
+        <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-6">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
+            <Calendar className="w-5 h-5 text-emerald-600 shrink-0" /> Step 2: Booking Duration & Time Slot
           </h2>
 
           {/* Duration Selector with Presets & Manual Input */}
@@ -205,7 +205,7 @@ export default function BookingWizard() {
             </label>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
                 {[1, 2, 3, 4].map((hrs) => (
                   <button
                     type="button"
@@ -223,29 +223,31 @@ export default function BookingWizard() {
               </div>
 
               {/* Manual Input for Custom Hours */}
-              <div className="flex items-center gap-2 bg-slate-50 p-2 px-3 rounded-xl border border-slate-300">
+              <div className="flex items-center justify-between sm:justify-start gap-2 bg-slate-50 p-2 px-3 rounded-xl border border-slate-300">
                 <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Custom Hours:</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="18"
-                  value={durationHours}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val)) {
-                      setDurationHours(Math.max(1, Math.min(18, val)));
-                    } else {
-                      setDurationHours(1);
-                    }
-                  }}
-                  className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-extrabold text-center text-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-                <span className="text-xs font-semibold text-slate-500">hrs</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="1"
+                    max="18"
+                    value={durationHours}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) {
+                        setDurationHours(Math.max(1, Math.min(18, val)));
+                      } else {
+                        setDurationHours(1);
+                      }
+                    }}
+                    className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-extrabold text-center text-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                  <span className="text-xs font-semibold text-slate-500">hrs</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-1.5 max-w-xs">
+          <div className="space-y-1.5 max-w-full sm:max-w-xs">
             <label className="text-xs font-bold text-slate-700">Booking Date</label>
             <input
               type="date"
@@ -267,7 +269,7 @@ export default function BookingWizard() {
             ) : slots.length === 0 ? (
               <p className="text-xs text-amber-700 py-4">No available consecutive {durationHours}-hour slots for the selected date.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {slots.map((slot, idx) => {
                   const isSelected = selectedSlot?.start_time === slot.start_time;
                   return (
@@ -297,9 +299,9 @@ export default function BookingWizard() {
         </div>
 
         {/* Step 3: Payment Method & Notes */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
-            <CreditCard className="w-5 h-5 text-emerald-600" /> Step 3: Payment & Summary
+        <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-5">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
+            <CreditCard className="w-5 h-5 text-emerald-600 shrink-0" /> Step 3: Payment & Summary
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -330,7 +332,7 @@ export default function BookingWizard() {
           </div>
 
           {/* Pricing Breakdown Box */}
-          <div className="p-5 rounded-2xl bg-slate-900 text-white flex flex-wrap items-center justify-between gap-4 text-sm border border-slate-800 shadow-sm">
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 text-white grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm border border-slate-800 shadow-sm">
             <div>
               <span className="text-slate-400 text-xs font-medium">Selected Duration:</span>
               <p className="font-extrabold text-white text-base">{durationHours} {durationHours === 1 ? 'Hour' : 'Hours'}</p>
@@ -349,9 +351,9 @@ export default function BookingWizard() {
         <button
           type="submit"
           disabled={!selectedSlot || submitting}
-          className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+          className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-40 cursor-pointer"
         >
-          <ShieldCheck className="w-5 h-5" /> {submitting ? 'Processing Reservation...' : `Confirm Court Reservation (₱${totalAmountDue.toFixed(2)})`}
+          <ShieldCheck className="w-5 h-5 shrink-0" /> {submitting ? 'Processing Reservation...' : `Confirm Court Reservation (₱${totalAmountDue.toFixed(2)})`}
         </button>
 
       </form>

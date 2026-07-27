@@ -90,7 +90,7 @@ export default function CalendarView() {
           <div className="calendar-container">
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
+              initialView={typeof window !== 'undefined' && window.innerWidth < 640 ? 'timeGridDay' : 'timeGridWeek'}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',

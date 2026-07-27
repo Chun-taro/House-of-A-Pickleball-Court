@@ -29,7 +29,7 @@ export default function Home() {
   return (
     <div className="space-y-12 py-6">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl p-8 sm:p-14 text-center text-white shadow-2xl border border-slate-800">
+      <section className="relative overflow-hidden rounded-3xl p-5 sm:p-14 text-center text-white shadow-2xl border border-slate-800">
         {/* Background Image with Light Overlay for high visibility */}
         <div className="absolute inset-0 z-0">
           <img src={backgroundImg} alt="House of A's Venue Background" className="w-full h-full object-cover object-center" />
@@ -43,22 +43,22 @@ export default function Home() {
         <div className="relative z-10 max-w-3xl mx-auto space-y-6">
           <div className="relative inline-block mb-1">
             <div className="absolute -inset-2 bg-emerald-500/30 rounded-3xl blur-md"></div>
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white p-2 border border-slate-700/80 shadow-2xl overflow-hidden mx-auto">
+            <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white p-2 border border-slate-700/80 shadow-2xl overflow-hidden mx-auto">
               <img src={logoImg} alt="House of A's Logo" className="w-full h-full object-contain" />
             </div>
           </div>
 
           <div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/85 backdrop-blur-md text-emerald-300 text-xs font-extrabold uppercase tracking-wider border border-emerald-800/60 shadow-md">
-              <Sparkles className="w-4 h-4 text-emerald-400 animate-spin-slow" /> Malaybalay’s Premier Pickleball Venue
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-900/85 backdrop-blur-md text-emerald-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider border border-emerald-800/60 shadow-md">
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 animate-spin-slow shrink-0" /> Malaybalay’s Premier Pickleball Venue
             </div>
           </div>
           
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-tight drop-shadow-md">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-tight drop-shadow-md">
             House of A’s <span className="gradient-text-emerald">Pickleball Court</span>
           </h1>
           
-          <p className="text-base sm:text-lg text-slate-100 max-w-2xl mx-auto font-semibold leading-relaxed drop-shadow-sm">
+          <p className="text-sm sm:text-lg text-slate-100 max-w-2xl mx-auto font-semibold leading-relaxed drop-shadow-sm">
             Purok-1, Linabo, Malaybalay City, Bukidnon. Book our private single court for casual matches, family games, or competitive pickleball sessions.
           </p>
 

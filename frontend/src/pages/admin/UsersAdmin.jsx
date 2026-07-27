@@ -72,27 +72,27 @@ export default function UsersAdmin() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-4 sm:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">User & Role Management</h1>
-          <p className="text-sm text-slate-600">Exclusive Admin portal to assign roles (Customer, Staff, Admin)</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">User & Role Management</h1>
+          <p className="text-xs sm:text-sm text-slate-600">Exclusive Admin portal to assign roles (Customer, Staff, Admin)</p>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm cursor-pointer transition-colors"
         >
           <Plus className="w-4 h-4" /> Create User Account
         </button>
       </div>
 
-      <div className="glass-card p-6 rounded-3xl space-y-4 shadow-md border border-slate-200">
+      <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4 shadow-md border border-slate-200">
         {loading ? (
           <div className="py-8 text-center text-slate-500">Loading users...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+          <div className="overflow-x-auto -mx-2 px-2">
+            <table className="w-full text-left text-xs text-slate-700 min-w-[550px]">
               <thead className="bg-slate-100/80 text-slate-500 uppercase text-[10px] font-bold">
                 <tr>
                   <th className="p-3 rounded-l-xl">Name</th>
@@ -137,8 +137,8 @@ export default function UsersAdmin() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="glass-card p-6 rounded-3xl max-w-md w-full space-y-4 shadow-xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="glass-card p-5 sm:p-6 rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">Create New Account</h3>
 
             {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}

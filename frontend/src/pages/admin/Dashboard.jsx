@@ -25,53 +25,53 @@ export default function Dashboard() {
   const { stats, recentBookings } = data || {};
 
   return (
-    <div className="p-6 sm:p-8 space-y-8">
+    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900">Admin Dashboard</h1>
-        <p className="text-sm text-slate-600">House of A's Pickleball Court operational overview</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Admin Dashboard</h1>
+        <p className="text-xs sm:text-sm text-slate-600">House of A's Pickleball Court operational overview</p>
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="glass-card p-6 rounded-2xl space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Bookings</span>
-            <BookOpen className="w-5 h-5 text-emerald-600" />
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Bookings</span>
+            <BookOpen className="w-5 h-5 text-emerald-600 shrink-0" />
           </div>
-          <p className="text-3xl font-extrabold text-slate-900">{stats?.totalBookings || 0}</p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats?.totalBookings || 0}</p>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl space-y-2">
+        <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Pending Approval</span>
-            <Clock className="w-5 h-5 text-amber-500" />
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Pending Approval</span>
+            <Clock className="w-5 h-5 text-amber-500 shrink-0" />
           </div>
-          <p className="text-3xl font-extrabold text-amber-600">{stats?.pendingBookings || 0}</p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-amber-600">{stats?.pendingBookings || 0}</p>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl space-y-2">
+        <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Approved Bookings</span>
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Approved Bookings</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
           </div>
-          <p className="text-3xl font-extrabold text-emerald-600">{stats?.approvedBookings || 0}</p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600">{stats?.approvedBookings || 0}</p>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl space-y-2">
+        <div className="glass-card p-5 sm:p-6 rounded-2xl space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Revenue</span>
-            <DollarSign className="w-5 h-5 text-emerald-600" />
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Revenue</span>
+            <DollarSign className="w-5 h-5 text-emerald-600 shrink-0" />
           </div>
-          <p className="text-3xl font-extrabold text-slate-900">₱{stats?.totalRevenue?.toFixed(2) || '0.00'}</p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">₱{stats?.totalRevenue?.toFixed(2) || '0.00'}</p>
         </div>
       </div>
 
       {/* Recent Bookings Table */}
-      <div className="glass-card p-6 rounded-3xl space-y-4">
-        <h2 className="text-xl font-bold text-slate-900">Recent Court Reservations</h2>
+      <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">
+        <h2 className="text-lg sm:text-xl font-bold text-slate-900">Recent Court Reservations</h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
+        <div className="overflow-x-auto -mx-2 px-2">
+          <table className="w-full text-left text-xs text-slate-700 min-w-[550px]">
             <thead className="bg-slate-100/80 text-slate-500 uppercase text-[10px] font-bold">
               <tr>
                 <th className="p-3 rounded-l-xl">Code</th>

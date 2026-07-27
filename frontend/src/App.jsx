@@ -40,10 +40,29 @@ const ProtectedRoute = ({ roles = [] }) => {
 
 // Admin Layout Component with Sidebar
 const AdminLayout = () => {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
   return (
-    <div className="flex min-h-[calc(100vh-4rem)]">
-      <Sidebar />
-      <main className="flex-1 bg-slate-100/60 overflow-y-auto">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] relative">
+      {/* Mobile Management Portal Header Toggle */}
+      <div className="lg:hidden bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center space-x-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="text-xs font-black text-white uppercase tracking-wider">Management Portal</span>
+        </div>
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors"
+        >
+          <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          Nav Menu
+        </button>
+      </div>
+
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <main className="flex-1 bg-slate-100/60 overflow-y-auto w-full">
         <Outlet />
       </main>
     </div>
@@ -53,7 +72,7 @@ const AdminLayout = () => {
 // Public/Customer Layout Component
 const CustomerLayout = () => {
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
       <Outlet />
     </main>
   );

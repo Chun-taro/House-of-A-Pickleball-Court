@@ -96,16 +96,16 @@ export default function FacilitiesAdmin() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-4 sm:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Facility Settings</h1>
-          <p className="text-sm text-slate-600">Manage venue details, operating hours, and standard pricing</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Facility Settings</h1>
+          <p className="text-xs sm:text-sm text-slate-600">Manage venue details, operating hours, and standard pricing</p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Add Facility
         </button>
@@ -113,15 +113,15 @@ export default function FacilitiesAdmin() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {facilities.map((fac) => (
-          <div key={fac._id} className="glass-card p-6 rounded-3xl space-y-4">
+          <div key={fac._id} className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">
             <div className="h-44 rounded-2xl overflow-hidden bg-slate-100 relative">
               <img src={fac.image_url && fac.image_url !== 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80' ? fac.image_url : courtImg} alt={fac.name} className="w-full h-full object-cover" />
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-slate-900">{fac.name}</h3>
-                <span className="font-extrabold text-emerald-700 text-base">₱{fac.hourly_rate}/hr</span>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">{fac.name}</h3>
+                <span className="font-extrabold text-emerald-700 text-base shrink-0">₱{fac.hourly_rate}/hr</span>
               </div>
               <p className="text-xs text-slate-600">{fac.location}</p>
               <p className="text-xs text-slate-500 line-clamp-2">{fac.description}</p>
@@ -147,8 +147,8 @@ export default function FacilitiesAdmin() {
 
       {/* Facility Form Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="glass-card p-6 rounded-3xl max-w-lg w-full space-y-4 shadow-xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="glass-card p-5 sm:p-6 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">{editingFac ? 'Edit Facility' : 'Create Facility'}</h3>
 
             {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}

@@ -20,16 +20,16 @@ export default function ReportsAdmin() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-4 sm:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Analytics & Reports</h1>
-          <p className="text-sm text-slate-600">Export financial summary and booking analytics</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Analytics & Reports</h1>
+          <p className="text-xs sm:text-sm text-slate-600">Export financial summary and booking analytics</p>
         </div>
 
         <button
           onClick={handleExportCsv}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
         >
           <Download className="w-4 h-4" /> Export CSV Report
         </button>

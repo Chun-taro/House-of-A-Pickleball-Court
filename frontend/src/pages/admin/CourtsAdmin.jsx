@@ -100,24 +100,24 @@ export default function CourtsAdmin() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="p-4 sm:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Courts Management</h1>
-          <p className="text-sm text-slate-600">Configure Pickleball court details and capacity</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Courts Management</h1>
+          <p className="text-xs sm:text-sm text-slate-600">Configure Pickleball court details and capacity</p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Add Court
         </button>
       </div>
 
-      <div className="glass-card p-6 rounded-3xl space-y-4">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
+      <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">
+        <div className="overflow-x-auto -mx-2 px-2">
+          <table className="w-full text-left text-xs text-slate-700 min-w-[500px]">
             <thead className="bg-slate-100/80 text-slate-500 uppercase text-[10px] font-bold">
               <tr>
                 <th className="p-3 rounded-l-xl">Court Name</th>
@@ -136,10 +136,10 @@ export default function CourtsAdmin() {
                   <td className="p-3 font-semibold text-emerald-700">{c.hourly_rate_override ? `₱${c.hourly_rate_override}` : 'Default (₱150)'}</td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleOpenEdit(c)} className="p-1.5 bg-slate-100 text-slate-700 rounded-md">
+                      <button onClick={() => handleOpenEdit(c)} className="p-1.5 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200">
                         <Edit className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(c._id)} className="p-1.5 bg-rose-50 text-rose-700 rounded-md">
+                      <button onClick={() => handleDelete(c._id)} className="p-1.5 bg-rose-50 text-rose-700 rounded-md hover:bg-rose-100">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -152,8 +152,8 @@ export default function CourtsAdmin() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="glass-card p-6 rounded-3xl max-w-md w-full space-y-4 shadow-xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="glass-card p-5 sm:p-6 rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">{editingCourt ? 'Edit Court' : 'Create Court'}</h3>
 
             {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}

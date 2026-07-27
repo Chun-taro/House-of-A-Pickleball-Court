@@ -59,15 +59,15 @@ export default function SchedulesAdmin() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900">Schedules & Holiday Blackouts</h1>
-        <p className="text-sm text-slate-600">Configure court operating hours and block dates for holidays</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Schedules & Holiday Blackouts</h1>
+        <p className="text-xs sm:text-sm text-slate-600">Configure court operating hours and block dates for holidays</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Operating Hours Box */}
-        <div className="glass-card p-6 rounded-3xl space-y-4">
+        <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Clock className="w-5 h-5 text-emerald-600" /> Standard Operating Hours
           </h2>

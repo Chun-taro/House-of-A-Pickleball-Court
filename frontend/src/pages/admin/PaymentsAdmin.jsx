@@ -29,18 +29,18 @@ export default function PaymentsAdmin() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900">Payments & Transactions</h1>
-        <p className="text-sm text-slate-600">Track court reservation payments and mark cash / GCash transactions</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Payments & Transactions</h1>
+        <p className="text-xs sm:text-sm text-slate-600">Track court reservation payments and mark cash / GCash transactions</p>
       </div>
 
-      <div className="glass-card p-6 rounded-3xl space-y-4">
+      <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">
         {loading ? (
           <div className="py-8 text-center text-slate-500">Loading payments list...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
+          <div className="overflow-x-auto -mx-2 px-2">
+            <table className="w-full text-left text-xs text-slate-700 min-w-[600px]">
               <thead className="bg-slate-100/80 text-slate-500 uppercase text-[10px] font-bold">
                 <tr>
                   <th className="p-3 rounded-l-xl">Booking Code</th>
