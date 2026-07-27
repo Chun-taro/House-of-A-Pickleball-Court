@@ -120,8 +120,18 @@ export const uploadProofImage = async (req, res) => {
     const uploadedAt = new Date();
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours (3 days)
 
-    payment.proof_filename = req.file.filename;
-    payment.proof_of_payment_url = `/api/payments/proof/${req.file.filename}`;
+    // Store image directly in Base64 string in MongoDB Atlas database
+    let base64Image = null;
+    if (req.file && req.file.buffer) {
+      base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
+
+    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const filename = `proof_${uniqueSuffix}`;
+
+    payment.proof_image_base64 = base64Image;
+    payment.proof_filename = filename;
+    payment.proof_of_payment_url = `/api/payments/proof/${payment._id}`;
     payment.proof_uploaded_at = uploadedAt;
     payment.proof_expires_at = expiresAt;
     payment.proof_status = 'verified';
@@ -162,7 +172,7 @@ export const uploadProofImage = async (req, res) => {
 
     return res.json({
       success: true,
-      message: 'Proof of payment uploaded successfully! Payment status is now Paid and your reservation is Approved.',
+      message: 'Proof of payment uploaded and saved directly to MongoDB Atlas! Reservation is Approved.',
       proof_url: payment.proof_of_payment_url,
       proof_expires_at: expiresAt,
       payment,
@@ -172,20 +182,38 @@ export const uploadProofImage = async (req, res) => {
   }
 };
 
-// Serve Proof Image (Check file existence in /tmp or uploads/proofs)
+// Serve Proof Image (Directly from MongoDB Atlas Base64 or disk fallback)
 export const serveProofImage = async (req, res) => {
   try {
-    const filename = req.params.filename;
-    const tmpPath = path.join('/tmp', 'uploads', 'proofs', filename);
-    const cwdPath = path.join(process.cwd(), 'uploads', 'proofs', filename);
+    const targetId = req.params.filename;
 
-    if (fs.existsSync(tmpPath)) {
-      return res.sendFile(tmpPath);
+    // 1. Query Payment by Mongo ObjectId or proof_filename
+    let payment = await Payment.findById(targetId).catch(() => null);
+    if (!payment) {
+      payment = await Payment.findOne({ proof_filename: targetId });
     }
 
-    if (fs.existsSync(cwdPath)) {
-      return res.sendFile(cwdPath);
+    // 2. Serve Base64 image directly from MongoDB Atlas if present
+    if (payment && payment.proof_image_base64) {
+      const matches = payment.proof_image_base64.match(/^data:(.+);base64,(.+)$/);
+      if (matches) {
+        const mimeType = matches[1];
+        const imageBuffer = Buffer.from(matches[2], 'base64');
+        res.writeHead(200, {
+          'Content-Type': mimeType,
+          'Content-Length': imageBuffer.length,
+          'Cache-Control': 'public, max-age=86400',
+        });
+        return res.end(imageBuffer);
+      }
     }
+
+    // 3. Disk fallback for local development files
+    const tmpPath = path.join('/tmp', 'uploads', 'proofs', targetId);
+    const cwdPath = path.join(process.cwd(), 'uploads', 'proofs', targetId);
+
+    if (fs.existsSync(tmpPath)) return res.sendFile(tmpPath);
+    if (fs.existsSync(cwdPath)) return res.sendFile(cwdPath);
 
     return res.status(404).json({ success: false, message: 'Proof image file has been purged or retention period expired.' });
   } catch (error) {

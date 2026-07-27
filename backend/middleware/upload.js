@@ -15,17 +15,8 @@ try {
   console.warn('Upload directory creation warning:', err.message);
 }
 
-// Storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    cb(null, `proof_${uniqueSuffix}${ext}`);
-  },
-});
+// Storage configuration: Memory storage to keep buffer for MongoDB Atlas persistence
+const storage = multer.memoryStorage();
 
 // File filter validation: JPG, JPEG, PNG only
 const fileFilter = (req, file, cb) => {
