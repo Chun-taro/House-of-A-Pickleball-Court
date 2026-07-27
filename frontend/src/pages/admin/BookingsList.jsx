@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import ManualBookingModal from '../../components/ManualBookingModal';
-import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download } from 'lucide-react';
+import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock } from 'lucide-react';
 
 export default function BookingsList() {
   const [bookings, setBookings] = useState([]);
@@ -10,6 +10,7 @@ export default function BookingsList() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [selectedProof, setSelectedProof] = useState(null);
 
   const fetchBookings = () => {
     let url = '/api/bookings/admin/all';
@@ -131,6 +132,16 @@ export default function BookingsList() {
                     <td className="p-3"><StatusBadge status={b.status} /></td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {b.payment?.proof_of_payment_url && (
+                          <button
+                            onClick={() => setSelectedProof(b)}
+                            className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold rounded-lg text-[10px] flex items-center gap-1 transition-colors"
+                            title="View GCash Proof Screenshot"
+                          >
+                            <Eye className="w-3 h-3 text-blue-600" /> Proof
+                          </button>
+                        )}
+
                         <a
                           href={`/api/bookings/${b._id}/receipt?token=${localStorage.getItem('sc_token') || localStorage.getItem('token') || ''}`}
                           target="_blank"
@@ -184,6 +195,58 @@ export default function BookingsList() {
           </div>
         )}
       </div>
+
+      {/* Proof Viewer Modal */}
+      {selectedProof && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="glass-card p-6 rounded-3xl max-w-lg w-full space-y-4 shadow-2xl relative">
+            <button
+              onClick={() => setSelectedProof(null)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <FileImage className="w-5 h-5 text-blue-600" /> GCash Proof of Payment
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Booking: <strong className="font-mono text-emerald-800">{selectedProof.booking_code}</strong> • Ref: <strong className="text-slate-800">{selectedProof.payment?.reference_number || 'N/A'}</strong>
+              </p>
+            </div>
+
+            {/* Image Preview Container */}
+            <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[60vh] flex items-center justify-center p-2">
+              <img
+                src={selectedProof.payment?.proof_of_payment_url}
+                alt="GCash Proof Screenshot"
+                className="max-h-[55vh] w-auto object-contain rounded-xl"
+              />
+            </div>
+
+            {/* Retention Notice */}
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2 font-medium">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Uploaded screenshot will be automatically purged after 2–3 days to conserve storage space.</span>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              {selectedProof.status === 'pending' && (
+                <button
+                  onClick={() => {
+                    handleUpdateStatus(selectedProof._id, 'approved');
+                    setSelectedProof(null);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Check className="w-4 h-4" /> Verify & Approve Booking
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual Booking Modal */}
       <ManualBookingModal

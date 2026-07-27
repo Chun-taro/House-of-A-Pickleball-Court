@@ -520,11 +520,18 @@ export const getAllBookingsAdmin = async (req, res) => {
       .populate('court_id', 'name')
       .sort({ createdAt: -1 });
 
+    const payments = await Payment.find({ booking_id: { $in: bookings.map((b) => b._id) } });
+    const paymentMap = {};
+    payments.forEach((p) => {
+      paymentMap[p.booking_id.toString()] = p.toObject();
+    });
+
     const mapped = bookings.map((b) => ({
       ...b.toObject(),
       id: b._id,
       _id: b._id,
       user_id: b.user_id ? { _id: b.user_id._id, name: b.user_id.name, email: b.user_id.email, phone: b.user_id.phone } : { name: 'Walk-in Guest', email: '', phone: '' },
+      payment: paymentMap[b._id.toString()] || null,
     }));
 
     return res.json({ success: true, bookings: mapped });
