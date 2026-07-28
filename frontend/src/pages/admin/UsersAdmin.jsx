@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Plus, Trash2, Shield, UserCheck } from 'lucide-react';
+import { Users, Plus, Trash2, Shield, UserCheck, AlertCircle } from 'lucide-react';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function UsersAdmin() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -39,11 +44,12 @@ export default function UsersAdmin() {
           setShowModal(false);
           setFormData({ name: '', email: '', password: '', phone: '', role: 'staff' });
           fetchUsers();
+          toast.success('User account created successfully.');
         } else {
           setError(res.data.message);
         }
       })
-      .catch((err) => setError(err.response?.data?.message || 'Failed'));
+      .catch((err) => setError(err.response?.data?.message || 'Failed to create user.'));
   };
 
   const handleRoleChange = (id, newRole) => {
@@ -51,31 +57,43 @@ export default function UsersAdmin() {
       .then((res) => {
         if (res.data.success) {
           fetchUsers();
+          toast.success('Role updated successfully.');
         } else {
-          alert(`⚠️ Action Blocked: ${res.data.message}`);
+          toast.warning(res.data.message || 'Action blocked.');
           fetchUsers();
         }
       })
       .catch((err) => {
-        alert(`⚠️ Action Blocked: ${err.response?.data?.message || 'Failed to update role'}`);
+        toast.error(err.response?.data?.message || 'Failed to update role.');
         fetchUsers();
       });
   };
 
-  const handleDeleteUser = (id) => {
-    if (!window.confirm('Delete user account?')) return;
+  const handleDeleteUser = async (id) => {
+    const confirmed = await confirm({
+      title: 'Delete User Account',
+      message: 'This will permanently delete the user account and all associated data. This cannot be undone.',
+      confirmText: 'Yes, Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+    if (!confirmed) return;
+
     axios.delete(`/api/users/${id}`)
       .then((res) => {
-        if (res.data.success) fetchUsers();
+        if (res.data.success) {
+          fetchUsers();
+          toast.success('User account deleted.');
+        }
       })
-      .catch((err) => alert(err.response?.data?.message || 'Failed'));
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to delete user.'));
   };
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">User & Role Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">User &amp; Role Management</h1>
           <p className="text-xs sm:text-sm text-slate-600">Exclusive Admin portal to assign roles (Customer, Staff, Admin)</p>
         </div>
 
@@ -141,7 +159,12 @@ export default function UsersAdmin() {
           <div className="glass-card p-5 sm:p-6 rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">Create New Account</h3>
 
-            {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}
+            {error && (
+              <div className="flex items-start gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl px-4 py-3">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-xs font-semibold leading-relaxed">{error}</p>
+              </div>
+            )}
 
             <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
               <div>
@@ -191,10 +214,10 @@ export default function UsersAdmin() {
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 font-bold text-slate-600">
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 font-bold text-slate-600 cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" className="px-4 py-2 font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl">
+                <button type="submit" className="px-4 py-2 font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl cursor-pointer">
                   Create Account
                 </button>
               </div>

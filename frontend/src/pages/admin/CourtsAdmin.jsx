@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Trophy, Plus, Edit, Trash2 } from 'lucide-react';
+import { Trophy, Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
+
 
 export default function CourtsAdmin() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [facilities, setFacilities] = useState([]);
   const [selectedFacilityId, setSelectedFacilityId] = useState('');
   const [courts, setCourts] = useState([]);
@@ -90,13 +96,23 @@ export default function CourtsAdmin() {
       .catch((err) => setError(err.response?.data?.message || 'Failed action'));
   };
 
-  const handleDelete = (id) => {
-    if (!window.confirm('Delete court?')) return;
+  const handleDelete = async (id) => {
+    const confirmed = await confirm({
+      title: 'Delete Court',
+      message: 'This will permanently delete the court. This action cannot be undone.',
+      confirmText: 'Yes, Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+    if (!confirmed) return;
     axios.delete(`/api/facilities/courts/${id}`)
       .then((res) => {
-        if (res.data.success) fetchCourts();
+        if (res.data.success) {
+          fetchCourts();
+          toast.success('Court deleted successfully.');
+        }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to delete court.'));
   };
 
   return (
@@ -156,7 +172,12 @@ export default function CourtsAdmin() {
           <div className="glass-card p-5 sm:p-6 rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">{editingCourt ? 'Edit Court' : 'Create Court'}</h3>
 
-            {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}
+            {error && (
+              <div className="flex items-start gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl px-4 py-3">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-xs font-semibold leading-relaxed">{error}</p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               <div>

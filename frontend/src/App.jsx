@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
+import { ConfirmProvider } from './components/ConfirmDialog';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -80,8 +82,10 @@ const CustomerLayout = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <ToastProvider>
+      <ConfirmProvider>
+        <AuthProvider>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-['Plus_Jakarta_Sans',sans-serif]">
           <Navbar />
           
@@ -125,7 +129,9 @@ export default function App() {
 
           <Footer />
         </div>
-      </Router>
-    </AuthProvider>
+          </Router>
+        </AuthProvider>
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }

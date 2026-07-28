@@ -2,8 +2,14 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Building2, Edit, Trash2, Plus, AlertCircle } from 'lucide-react';
 import courtImg from '../../images/pickle ball court.jpg';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
+
 
 export default function FacilitiesAdmin() {
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -86,13 +92,23 @@ export default function FacilitiesAdmin() {
       .catch((err) => setError(err.response?.data?.message || 'Action failed'));
   };
 
-  const handleDelete = (id) => {
-    if (!window.confirm('Are you sure you want to delete this facility?')) return;
+  const handleDelete = async (id) => {
+    const confirmed = await confirm({
+      title: 'Delete Facility',
+      message: 'This will permanently delete the facility and all related data. This action cannot be undone.',
+      confirmText: 'Yes, Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+    if (!confirmed) return;
     axios.delete(`/api/facilities/${id}`)
       .then((res) => {
-        if (res.data.success) fetchFacilities();
+        if (res.data.success) {
+          fetchFacilities();
+          toast.success('Facility deleted successfully.');
+        }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to delete.'));
   };
 
   return (
@@ -151,7 +167,12 @@ export default function FacilitiesAdmin() {
           <div className="glass-card p-5 sm:p-6 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900">{editingFac ? 'Edit Facility' : 'Create Facility'}</h3>
 
-            {error && <p className="text-xs text-rose-600 font-semibold">{error}</p>}
+            {error && (
+              <div className="flex items-start gap-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl px-4 py-3">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <p className="text-xs font-semibold leading-relaxed">{error}</p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-3 text-xs">
               <div>
