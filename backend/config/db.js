@@ -19,9 +19,8 @@ if (!cached) {
 }
 
 const connectDB = async () => {
-  const mongoUri =
-    process.env.MONGO_URI ||
-    'mongodb+srv://houseofaspickleballcourt_db_user:oGCcoxN7lrp6PfFS@cluster0.pgvk5si.mongodb.net/house_of_as_pickleball?retryWrites=true&w=majority&appName=Cluster0';
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) throw new Error('MONGO_URI environment variable is not set.');
 
   if (cached.conn && mongoose.connection.readyState >= 1) {
     return cached.conn;
