@@ -51,7 +51,7 @@ export const updateOperatingHours = async (req, res) => {
           facility_id,
           day_of_week: item.day_of_week,
           open_time: item.open_time || '06:00',
-          close_time: item.close_time || '22:00',
+          close_time: item.close_time || '23:00',
           is_closed: !!item.is_closed,
         },
         { upsert: true, new: true }

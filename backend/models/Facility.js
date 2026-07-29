@@ -9,7 +9,7 @@ const facilitySchema = new mongoose.Schema(
     image_url: { type: String, default: '' },
     is_active: { type: Boolean, default: true },
     open_time: { type: String, default: '08:00' },
-    close_time: { type: String, default: '22:00' },
+    close_time: { type: String, default: '23:00' },
   },
   { timestamps: true }
 );

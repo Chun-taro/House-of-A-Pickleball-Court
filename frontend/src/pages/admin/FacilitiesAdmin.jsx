@@ -22,7 +22,7 @@ export default function FacilitiesAdmin() {
     hourly_rate: 150,
     image_url: '/court.jpg',
     open_time: '06:00',
-    close_time: '22:00',
+    close_time: '23:00',
   });
 
   const [error, setError] = useState('');
@@ -51,7 +51,7 @@ export default function FacilitiesAdmin() {
       hourly_rate: 150,
       image_url: '/court.jpg',
       open_time: '06:00',
-      close_time: '22:00',
+      close_time: '23:00',
     });
     setError('');
     setShowModal(true);
@@ -66,7 +66,7 @@ export default function FacilitiesAdmin() {
       hourly_rate: fac.hourly_rate,
       image_url: fac.image_url || '',
       open_time: fac.open_time || '06:00',
-      close_time: fac.close_time || '22:00',
+      close_time: fac.close_time || '23:00',
     });
     setError('');
     setShowModal(true);

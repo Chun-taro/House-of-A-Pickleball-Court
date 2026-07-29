@@ -123,7 +123,7 @@ export default function CalendarView() {
               displayEventTime={false}
               events={events}
               slotMinTime="05:00:00"
-              slotMaxTime="23:00:00"
+              slotMaxTime="24:00:00"
               slotDuration="01:00:00"
               allDaySlot={false}
               height="auto"
