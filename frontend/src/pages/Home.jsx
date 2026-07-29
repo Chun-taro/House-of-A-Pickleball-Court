@@ -1,18 +1,66 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Trophy, Calendar, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star, Volume2, ShieldAlert, Wifi, CloudRain, Gamepad2, FileText, Car, Bath, ShoppingBag, KeyRound, Tag, Banknote, Users } from 'lucide-react';
+import { Trophy, Calendar, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star, Volume2, ShieldAlert, Wifi, CloudRain, Gamepad2, FileText, Car, Bath, ShoppingBag, KeyRound, Tag, Banknote, Users, ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react';
 import CourtAvailabilityCalendar from '../components/CourtAvailabilityCalendar';
 
 import logoImg from '../images/Logo.jpg';
-import courtImg from '../images/bb02c1f8c38d725d863a91c3f74a3cc9.jpeg';
 import backgroundImg from '../images/background.jpg';
 import heroImg from '../images/IMG_6453.jpg';
+
+// House of A's Court Gallery Images
+import galleryImg1 from '../images/IMG_5322.jpg';
+import galleryImg2 from '../images/IMG_5325.png';
+import galleryImg3 from '../images/IMG_5328.png';
+import galleryImg4 from '../images/img.jpeg';
 
 export default function Home() {
   const [facility, setFacility] = useState(null);
   const [courts, setCourts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Gallery state
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const galleryPhotos = [
+    {
+      src: '/images/IMG_5322.jpg',
+      fallback: galleryImg1,
+      title: "Main Indoor Court View",
+      tag: "Court View",
+      description: "Official indoor pickleball court setup with high-grade non-slip court surface and net."
+    },
+    {
+      src: '/images/IMG_5325.png',
+      fallback: galleryImg2,
+      title: "Pickleball Net & Sidelines",
+      tag: "Surface & Net",
+      description: "Clean boundary lines and court layout designed for fast-paced pickleball games."
+    },
+    {
+      src: '/images/IMG_5328.png',
+      fallback: galleryImg3,
+      title: "Indoor Facility & Lighting",
+      tag: "Lighting & Venue",
+      description: "Bright overhead LED illumination providing clear visibility day and night."
+    },
+    {
+      src: '/images/img.jpeg',
+      fallback: galleryImg4,
+      title: "Inside House of A's Court",
+      tag: "Interior & Lounge",
+      description: "Spacious court and seating area for players and spectators in Linabo, Malaybalay City."
+    }
+  ];
+
+  const nextPhoto = () => {
+    setActivePhotoIndex((prev) => (prev + 1) % galleryPhotos.length);
+  };
+
+  const prevPhoto = () => {
+    setActivePhotoIndex((prev) => (prev - 1 + galleryPhotos.length) % galleryPhotos.length);
+  };
 
   useEffect(() => {
     axios.get('/api/facilities')
@@ -196,29 +244,176 @@ export default function Home() {
 
       {/* Photo Gallery Section */}
       <section className="space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider border border-emerald-200">
               <Trophy className="w-3.5 h-3.5" /> Venue Gallery
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Inside House of A's Court</h2>
           </div>
-          <p className="text-xs text-slate-500 max-w-xs text-right hidden sm:block">Real photos from our Pickleball Court in Linabo, Malaybalay City.</p>
-        </div>
-
-        <div className="h-80 sm:h-[30rem] rounded-3xl overflow-hidden relative group shadow-xl border border-slate-200">
-          <img
-            src={courtImg}
-            alt="House of A's Pickleball Court - Interior Court View"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <span className="bg-slate-950/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700">
-              House of A's Pickleball Court · Linabo, Malaybalay City
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+              Photo {activePhotoIndex + 1} of {galleryPhotos.length}
             </span>
+            <p className="text-xs text-slate-500 max-w-xs text-right hidden lg:block">Real photos from our Pickleball Court in Linabo, Malaybalay City.</p>
           </div>
         </div>
+
+        {/* Featured Large Active Photo Card */}
+        <div className="h-80 sm:h-[32rem] rounded-3xl overflow-hidden relative group shadow-2xl border border-slate-200 bg-slate-950">
+          <img
+            src={galleryPhotos[activePhotoIndex].src}
+            alt={galleryPhotos[activePhotoIndex].title}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = galleryPhotos[activePhotoIndex].fallback;
+            }}
+            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-102"
+          />
+
+          {/* Dark Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+
+          {/* Left Arrow Navigation */}
+          <button
+            type="button"
+            onClick={prevPhoto}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white backdrop-blur-md flex items-center justify-center border border-slate-700/80 shadow-lg transition-all opacity-80 group-hover:opacity-100 cursor-pointer hover:scale-110"
+            title="Previous Photo"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          {/* Right Arrow Navigation */}
+          <button
+            type="button"
+            onClick={nextPhoto}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-950/70 hover:bg-slate-950 text-white backdrop-blur-md flex items-center justify-center border border-slate-700/80 shadow-lg transition-all opacity-80 group-hover:opacity-100 cursor-pointer hover:scale-110"
+            title="Next Photo"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          {/* Bottom Info & Fullscreen Button */}
+          <div className="absolute bottom-5 left-5 right-5 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+            <div className="space-y-1.5 max-w-xl text-white">
+              <div className="inline-block bg-emerald-500/90 text-slate-950 font-black text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-md shadow-sm">
+                {galleryPhotos[activePhotoIndex].tag}
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black drop-shadow-md">
+                {galleryPhotos[activePhotoIndex].title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-200 font-medium drop-shadow-xs">
+                {galleryPhotos[activePhotoIndex].description}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="bg-slate-900/90 hover:bg-emerald-500 hover:text-slate-950 backdrop-blur-md text-white text-xs font-black px-4 py-2.5 rounded-xl border border-slate-700 shadow-xl flex items-center gap-2 transition-all cursor-pointer shrink-0"
+            >
+              <Maximize2 className="w-4 h-4" /> Fullscreen View
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Interactive Gallery Thumbnails */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {galleryPhotos.map((photo, index) => {
+            const isActive = index === activePhotoIndex;
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setActivePhotoIndex(index)}
+                className={`relative h-28 sm:h-36 rounded-2xl overflow-hidden border-2 transition-all duration-300 group cursor-pointer text-left ${
+                  isActive
+                    ? 'border-emerald-500 ring-4 ring-emerald-500/20 shadow-lg scale-[1.02]'
+                    : 'border-slate-200 hover:border-emerald-300 opacity-75 hover:opacity-100'
+                }`}
+              >
+                <img
+                  src={photo.src}
+                  alt={photo.title}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = photo.fallback;
+                  }}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className={`absolute inset-0 transition-opacity ${isActive ? 'bg-gradient-to-t from-slate-950/80 via-transparent to-transparent' : 'bg-slate-950/20 group-hover:bg-transparent'}`} />
+                <div className="absolute bottom-2 left-2 right-2">
+                  <span className={`text-[11px] font-bold block truncate px-2 py-1 rounded-md backdrop-blur-md ${isActive ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-slate-950/70 text-white'}`}>
+                    {photo.title}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Fullscreen Lightbox Modal */}
+        {lightboxOpen && (
+          <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-8 animate-fadeIn">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-6 right-6 w-12 h-12 rounded-full bg-slate-900/90 hover:bg-rose-500 text-white flex items-center justify-center border border-slate-700 shadow-2xl transition-all cursor-pointer z-50"
+              title="Close Fullscreen"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Lightbox Navigation Left */}
+            <button
+              type="button"
+              onClick={prevPhoto}
+              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/90 hover:bg-emerald-500 hover:text-slate-950 text-white flex items-center justify-center border border-slate-700 shadow-2xl transition-all cursor-pointer z-50"
+              title="Previous Photo"
+            >
+              <ChevronLeft className="w-7 h-7" />
+            </button>
+
+            {/* Lightbox Navigation Right */}
+            <button
+              type="button"
+              onClick={nextPhoto}
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/90 hover:bg-emerald-500 hover:text-slate-950 text-white flex items-center justify-center border border-slate-700 shadow-2xl transition-all cursor-pointer z-50"
+              title="Next Photo"
+            >
+              <ChevronRight className="w-7 h-7" />
+            </button>
+
+            {/* Lightbox Main Image & Details */}
+            <div className="max-w-5xl w-full max-h-[85vh] flex flex-col items-center space-y-4">
+              <div className="w-full h-[65vh] rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-black relative flex items-center justify-center">
+                <img
+                  src={galleryPhotos[activePhotoIndex].src}
+                  alt={galleryPhotos[activePhotoIndex].title}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = galleryPhotos[activePhotoIndex].fallback;
+                  }}
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+
+              <div className="text-center text-white space-y-1 max-w-xl">
+                <div className="inline-block bg-emerald-500 text-slate-950 font-black text-xs uppercase px-3 py-0.5 rounded-full mb-1">
+                  {galleryPhotos[activePhotoIndex].tag} ({activePhotoIndex + 1} / {galleryPhotos.length})
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black">
+                  {galleryPhotos[activePhotoIndex].title}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300">
+                  {galleryPhotos[activePhotoIndex].description}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Facility Details Card */}
@@ -229,7 +424,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="h-80 rounded-2xl overflow-hidden relative border border-slate-200 shadow-md group">
               <img
-                src={facility.image_url && facility.image_url !== 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80' ? facility.image_url : courtImg}
+                src={facility.image_url && facility.image_url !== 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=1200&auto=format&fit=crop&q=80' ? facility.image_url : galleryImg1}
                 alt="House of A's Court"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />

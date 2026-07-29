@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { MapPin, Clock, Trophy, Calendar, Users, Car, Bath, ShoppingBag, KeyRound, Tag } from 'lucide-react';
-import courtImg from '../images/bb02c1f8c38d725d863a91c3f74a3cc9.jpeg';
+import courtImg from '../images/IMG_5322.jpg';
 
 export default function FacilityDetails() {
   const { id } = useParams();
