@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
     is_verified: { type: Boolean, default: true },
     verification_code: { type: String, default: null },
     verification_expires_at: { type: Date, default: null },
+    reset_code: { type: String, default: null },
+    reset_code_expires: { type: Date, default: null },
   },
   { timestamps: true }
 );

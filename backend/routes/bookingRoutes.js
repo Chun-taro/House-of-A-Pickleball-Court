@@ -3,6 +3,7 @@ import {
   checkAvailability,
   getPublicCalendarEvents,
   createBooking,
+  submitBalancePayment,
   createManualBookingAdmin,
   getMyBookings,
   getBookingById,
@@ -23,6 +24,7 @@ router.get('/public-calendar-events', getPublicCalendarEvents);
 
 // Customer & User routes (With optional proof_image upload for GCash)
 router.post('/', protect, uploadProof.single('proof_image'), createBooking);
+router.post('/:id/pay-balance', protect, uploadProof.single('proof_image'), submitBalancePayment);
 router.get('/my-bookings', protect, getMyBookings);
 router.post('/:id/cancel', protect, cancelBooking);
 

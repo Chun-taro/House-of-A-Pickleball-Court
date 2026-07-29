@@ -12,6 +12,7 @@ import scheduleRoutes from './routes/scheduleRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 import { startCleanupScheduler } from './services/cleanupService.js';
 
 const app = express();
@@ -67,6 +68,7 @@ app.use(['/api/schedules', '/schedules'], scheduleRoutes);
 app.use(['/api/payments', '/payments'], paymentRoutes);
 app.use(['/api/reports', '/reports'], reportRoutes);
 app.use(['/api/users', '/users'], userRoutes);
+app.use(['/api/notifications', '/notifications'], notificationRoutes);
 
 // 6. 404 Handler
 app.use((req, res) => {

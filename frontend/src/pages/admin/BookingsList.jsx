@@ -3,7 +3,7 @@ import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import ManualBookingModal from '../../components/ManualBookingModal';
 import PdfReceiptModal from '../../components/PdfReceiptModal';
-import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock, ShieldAlert } from 'lucide-react';
+import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock, ShieldAlert, Banknote, Smartphone } from 'lucide-react';
 
 export default function BookingsList() {
   const [bookings, setBookings] = useState([]);
@@ -11,7 +11,9 @@ export default function BookingsList() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [selectedProof, setSelectedProof] = useState(null);
+  const [activeProofIdx, setActiveProofIdx] = useState(0);
   const [proofImgError, setProofImgError] = useState(false);
   const [receiptBooking, setReceiptBooking] = useState(null);
 
@@ -34,13 +36,20 @@ export default function BookingsList() {
   }, [statusFilter]);
 
   const handleUpdateStatus = (id, newStatus) => {
+    setErrorMessage('');
     axios.patch(`/api/bookings/admin/${id}/status`, { status: newStatus })
       .then((res) => {
         if (res.data.success) {
+          const finalStatus = res.data.booking?.status || newStatus;
+          setAlertMessage(`Booking status updated to [${finalStatus.toUpperCase()}]`);
+          setTimeout(() => setAlertMessage(''), 4000);
           fetchBookings();
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        const msg = err.response?.data?.message || 'Failed to update booking status.';
+        setErrorMessage(msg);
+      });
   };
 
   const handleManualSuccess = (msg) => {
@@ -76,6 +85,7 @@ export default function BookingsList() {
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
+              <option value="partially_paid">Partially Paid</option>
               <option value="approved">Approved</option>
               <option value="checked_in">Checked In</option>
               <option value="completed">Completed</option>
@@ -93,6 +103,21 @@ export default function BookingsList() {
         </div>
       )}
 
+      {errorMessage && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            onClick={() => setErrorMessage('')}
+            className="text-xs font-extrabold text-rose-700 hover:text-rose-900 underline shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">
         {loading ? (
           <div className="py-8 text-center text-slate-500">Loading bookings list...</div>
@@ -100,45 +125,69 @@ export default function BookingsList() {
           <div className="py-8 text-center text-slate-500">No bookings match the filter criteria.</div>
         ) : (
           <div className="overflow-x-auto -mx-2 px-2">
-            <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
+            <table className="w-full text-left text-xs text-slate-700 min-w-[750px]">
               <thead className="bg-slate-100/80 text-slate-500 uppercase text-[10px] font-bold">
                 <tr>
                   <th className="p-3 rounded-l-xl">Code</th>
                   <th className="p-3">Customer Name</th>
                   <th className="p-3">Court</th>
                   <th className="p-3">Date & Time</th>
-                  <th className="p-3">Notes / Purpose</th>
-                  <th className="p-3">Amount</th>
+                  <th className="p-3">Method</th>
+                  <th className="p-3">Total Amount</th>
+                  <th className="p-3">Paid / Remaining</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 rounded-r-xl text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {bookings.map((b) => (
-                  <tr key={b._id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-mono font-bold text-emerald-800">{b.booking_code}</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-900 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
-                          {b.user_id?.name?.charAt(0).toUpperCase() || 'U'}
+                {bookings.map((b) => {
+                  const paid = b.paid_amount || 0;
+                  const remaining = Math.max(0, (b.total_amount || 0) - paid);
+                  const method = b.payment_method || b.payment?.payment_method || 'cash';
+                  const isCash = method === 'cash';
+
+                  return (
+                    <tr key={b._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-mono font-bold text-emerald-800">{b.booking_code}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-slate-900 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            {b.user_id?.name?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-slate-900 text-sm">{b.user_id?.name || 'Walk-in Customer'}</div>
+                            {b.user_id?.email && <div className="text-[10px] text-slate-500">{b.user_id.email}</div>}
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-extrabold text-slate-900 text-sm">{b.user_id?.name || 'Walk-in Customer'}</div>
-                          {b.user_id?.email && <div className="text-[10px] text-slate-500">{b.user_id.email}</div>}
+                      </td>
+                      <td className="p-3 font-semibold text-slate-800">{b.court_id?.name || 'Main Court'}</td>
+                      <td className="p-3 font-mono">{b.booking_date} ({b.start_time}-{b.end_time})</td>
+                      <td className="p-3">
+                        {isCash ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-extrabold text-[10px]">
+                            <Banknote className="w-3 h-3 text-emerald-600" /> Cash
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-extrabold text-[10px]">
+                            <Smartphone className="w-3 h-3 text-blue-600" /> GCash
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 font-bold text-slate-900">₱{b.total_amount?.toFixed(2)}</td>
+                      <td className="p-3 font-mono text-[11px]">
+                        <div className="font-extrabold text-emerald-700">Paid: ₱{paid.toFixed(2)}</div>
+                        <div className={remaining > 0 ? 'font-bold text-amber-700' : 'text-slate-400'}>
+                          Rem: ₱{remaining.toFixed(2)}
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-3 font-semibold text-slate-800">{b.court_id?.name || 'Main Court'}</td>
-                    <td className="p-3 font-mono">{b.booking_date} ({b.start_time}-{b.end_time})</td>
-                    <td className="p-3 text-slate-600 max-w-xs truncate">{b.notes || '-'}</td>
-                    <td className="p-3 font-bold text-slate-900">₱{b.total_amount?.toFixed(2)}</td>
-                    <td className="p-3"><StatusBadge status={b.status} /></td>
-                    <td className="p-3 text-right">
+                      </td>
+                      <td className="p-3"><StatusBadge status={b.status} /></td>
+                      <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {b.payment?.proof_of_payment_url && (
+                        {!isCash && b.payment?.proof_of_payment_url && (
                           <button
                             onClick={() => {
                               setProofImgError(false);
+                              setActiveProofIdx(0);
                               setSelectedProof(b);
                             }}
                             className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold rounded-lg text-[10px] flex items-center gap-1 transition-colors"
@@ -159,11 +208,11 @@ export default function BookingsList() {
                         {b.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleUpdateStatus(b._id, 'approved')}
+                              onClick={() => handleUpdateStatus(b._id, b.payment_type === 'partial' ? 'partially_paid' : 'approved')}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1"
-                              title="Approve"
+                              title={b.payment_type === 'partial' ? 'Approve 1st Deposit & Mark Partially Paid' : 'Approve Full Booking'}
                             >
-                              <Check className="w-3 h-3" /> Approve
+                              <Check className="w-3 h-3" /> {b.payment_type === 'partial' ? 'Approve Deposit' : 'Approve'}
                             </button>
                             <button
                               onClick={() => handleUpdateStatus(b._id, 'rejected')}
@@ -174,10 +223,31 @@ export default function BookingsList() {
                             </button>
                           </>
                         )}
+                        {b.status === 'partially_paid' && (
+                          <>
+                            {b.payments && b.payments.length > 1 ? (
+                              <button
+                                onClick={() => handleUpdateStatus(b._id, 'approved')}
+                                className="px-2.5 py-1 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1 shadow-xs"
+                                title="Verify 2nd Payment & Mark Fully Approved"
+                              >
+                                <Check className="w-3 h-3" /> Verify 2nd Pay
+                              </button>
+                            ) : null}
+                            <button
+                              onClick={() => handleUpdateStatus(b._id, 'checked_in')}
+                              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1"
+                              title="Check in customer & collect remaining cash balance"
+                            >
+                              <LogIn className="w-3 h-3" /> Check In
+                            </button>
+                          </>
+                        )}
                         {b.status === 'approved' && (
                           <button
                             onClick={() => handleUpdateStatus(b._id, 'checked_in')}
                             className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1"
+                            title="Check in customer"
                           >
                             <LogIn className="w-3 h-3" /> Check In
                           </button>
@@ -193,7 +263,8 @@ export default function BookingsList() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -201,65 +272,137 @@ export default function BookingsList() {
       </div>
 
       {/* Proof Viewer Modal */}
-      {selectedProof && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="glass-card p-6 rounded-3xl max-w-lg w-full space-y-4 shadow-2xl relative">
-            <button
-              onClick={() => setSelectedProof(null)}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {selectedProof && (() => {
+        const proofList = selectedProof.payments && selectedProof.payments.length > 0
+          ? selectedProof.payments.filter(p => p.proof_of_payment_url)
+          : selectedProof.payment?.proof_of_payment_url ? [selectedProof.payment] : [];
 
-            <div>
-              <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <FileImage className="w-5 h-5 text-blue-600" /> GCash Proof of Payment
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Booking: <strong className="font-mono text-emerald-800">{selectedProof.booking_code}</strong> • Ref: <strong className="text-slate-800">{selectedProof.payment?.reference_number || 'N/A'}</strong>
-              </p>
-            </div>
+        const currentItem = proofList[activeProofIdx] || selectedProof.payment || selectedProof;
 
-            {/* Image Preview Container */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[60vh] flex items-center justify-center p-2 min-h-[160px]">
-              {proofImgError ? (
-                <div className="py-8 text-center text-slate-400 space-y-2">
-                  <ShieldAlert className="w-8 h-8 mx-auto text-amber-500/90 mb-1" />
-                  <p className="font-semibold text-xs text-slate-200">Proof Screenshot Unavailable</p>
-                  <p className="text-[10px] text-slate-400 max-w-xs mx-auto">This image file has either expired (purged after 72 hours) or is unavailable.</p>
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="glass-card p-6 rounded-3xl max-w-xl w-full space-y-4 shadow-2xl relative bg-white">
+              <button
+                onClick={() => setSelectedProof(null)}
+                className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                  <FileImage className="w-5 h-5 text-blue-600" /> GCash Proof of Payment Viewer
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Booking Ref: <strong className="font-mono text-emerald-800">{selectedProof.booking_code}</strong>
+                </p>
+              </div>
+
+              {/* Multi-Proof Tabs (Deposit vs Balance) */}
+              {proofList.length > 1 && (
+                <div className="flex border-b border-slate-200 gap-2 text-xs">
+                  {proofList.map((pItem, idx) => (
+                    <button
+                      key={pItem._id || idx}
+                      onClick={() => {
+                        setProofImgError(false);
+                        setActiveProofIdx(idx);
+                      }}
+                      className={`pb-2.5 px-3 font-extrabold border-b-2 transition-all flex items-center gap-1.5 ${
+                        activeProofIdx === idx
+                          ? 'border-blue-600 text-blue-700'
+                          : 'border-transparent text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>
+                        {pItem.transaction_type === 'partial_initial'
+                          ? 'Proof 1: Deposit'
+                          : pItem.transaction_type === 'partial_balance'
+                          ? 'Proof 2: Balance'
+                          : `Proof #${idx + 1}`}
+                      </span>
+                      <span className="font-mono text-[11px] font-black">₱{pItem.amount?.toFixed(2)}</span>
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <img
-                  src={selectedProof.payment?.proof_of_payment_url}
-                  alt="GCash Proof Screenshot"
-                  onError={() => setProofImgError(true)}
-                  className="max-h-[55vh] w-auto object-contain rounded-xl"
-                />
               )}
-            </div>
 
-            {/* Retention Notice */}
-            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2 font-medium">
-              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Uploaded screenshot will be automatically purged after 2–3 days to conserve storage space.</span>
-            </div>
+              {/* Current Proof Info Bar */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-black text-slate-900 block">
+                    {currentItem.transaction_type === 'partial_initial'
+                      ? '1st Payment Proof (Initial Deposit)'
+                      : currentItem.transaction_type === 'partial_balance'
+                      ? '2nd Payment Proof (Remaining Balance)'
+                      : 'Full Payment Proof'}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Ref: <strong className="font-mono text-slate-700">{currentItem.reference_number || 'N/A'}</strong> • Amount: <strong className="text-emerald-700 font-bold">₱{currentItem.amount?.toFixed(2)}</strong>
+                  </span>
+                </div>
+                <StatusBadge status={currentItem.verification_status === 'verified' ? 'paid' : currentItem.verification_status === 'rejected' ? 'failed' : 'pending_verification'} />
+              </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              {selectedProof.status === 'pending' && (
+              {/* Image Preview Container */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-950/90 overflow-hidden max-h-[50vh] flex items-center justify-center p-2 min-h-[180px]">
+                {proofImgError ? (
+                  <div className="py-8 text-center text-slate-400 space-y-2">
+                    <ShieldAlert className="w-8 h-8 mx-auto text-amber-500/90 mb-1" />
+                    <p className="font-semibold text-xs text-slate-200">Proof Screenshot Unavailable</p>
+                    <p className="text-[10px] text-slate-400 max-w-xs mx-auto">This image file has either expired (purged after 72 hours) or is unavailable.</p>
+                  </div>
+                ) : (
+                  <img
+                    src={currentItem.proof_of_payment_url}
+                    alt="GCash Proof Screenshot"
+                    onError={() => setProofImgError(true)}
+                    className="max-h-[45vh] w-auto object-contain rounded-xl"
+                  />
+                )}
+              </div>
+
+              {/* Retention Notice */}
+              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2 font-medium">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Uploaded screenshot will be automatically purged after 2–3 days.</span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                {selectedProof.status === 'pending' && (
+                  <button
+                    onClick={() => {
+                      handleUpdateStatus(selectedProof._id, selectedProof.payment_type === 'partial' ? 'partially_paid' : 'approved');
+                      setSelectedProof(null);
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" /> {selectedProof.payment_type === 'partial' ? 'Approve 1st Deposit & Book Slot' : 'Approve Booking'}
+                  </button>
+                )}
+                {selectedProof.status === 'partially_paid' && selectedProof.payments?.length > 1 && (
+                  <button
+                    onClick={() => {
+                      handleUpdateStatus(selectedProof._id, 'approved');
+                      setSelectedProof(null);
+                    }}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" /> Verify 2nd Balance Payment
+                  </button>
+                )}
                 <button
-                  onClick={() => {
-                    handleUpdateStatus(selectedProof._id, 'approved');
-                    setSelectedProof(null);
-                  }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+                  onClick={() => setSelectedProof(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
                 >
-                  <Check className="w-4 h-4" /> Verify & Approve Booking
+                  Close
                 </button>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Manual Booking Modal */}
       <ManualBookingModal

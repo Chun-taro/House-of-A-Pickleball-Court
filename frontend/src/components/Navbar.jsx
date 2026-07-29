@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Trophy, Calendar, LogOut, LayoutDashboard, UserCheck, Menu, X, User } from 'lucide-react';
 
 import logoImg from '../images/Logo.jpg';
+import NotificationDropdown from './NotificationDropdown';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -104,6 +105,8 @@ export default function Navbar() {
             <div className="hidden sm:flex items-center space-x-2">
               {user ? (
                 <>
+                  <NotificationDropdown />
+
                   <Link
                     to={user.role === 'customer' ? '/profile' : '/admin/dashboard'}
                     className="flex items-center space-x-2 text-sm text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-800 transition-colors shadow-sm"
@@ -175,6 +178,7 @@ export default function Navbar() {
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <NotificationDropdown />
                   <Link
                     to={user.role === 'customer' ? '/profile' : '/admin/dashboard'}
                     className="p-2 text-slate-300 hover:text-white bg-slate-800 rounded-xl"

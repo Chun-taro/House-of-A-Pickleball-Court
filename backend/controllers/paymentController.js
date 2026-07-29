@@ -3,7 +3,44 @@ import fs from 'fs';
 import Payment from '../models/Payment.js';
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { sendPaymentReceiptEmail } from '../utils/mailer.js';
+
+// Helper to recalculate total verified payments and update booking status
+export const recalculateBookingPayments = async (bookingId) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) return null;
+
+  const payments = await Payment.find({ booking_id: bookingId });
+
+  // Sum of all verified/paid payments
+  const totalVerifiedPaid = payments
+    .filter((p) => p.verification_status === 'verified' || p.payment_status === 'paid')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  booking.paid_amount = totalVerifiedPaid;
+  const remainingBalance = Math.max(0, booking.total_amount - totalVerifiedPaid);
+
+  if (totalVerifiedPaid >= booking.total_amount) {
+    if (['pending', 'partially_paid'].includes(booking.status)) {
+      booking.status = 'approved';
+    }
+  } else if (totalVerifiedPaid > 0) {
+    booking.status = 'partially_paid';
+  } else {
+    if (booking.status === 'partially_paid') {
+      booking.status = 'pending';
+    }
+  }
+
+  await booking.save();
+
+  return {
+    total_verified_paid: totalVerifiedPaid,
+    remaining_balance: remainingBalance,
+    booking_status: booking.status,
+  };
+};
 
 // Get Payments List for Staff / Admin
 export const getPayments = async (req, res) => {
@@ -11,17 +48,33 @@ export const getPayments = async (req, res) => {
     const { status, method } = req.query;
     const query = {};
 
-    if (status) query.payment_status = status;
+    if (status) {
+      if (status === 'partially_paid') {
+        query.payment_status = { $in: ['partially_paid', 'pending_verification'] };
+      } else {
+        query.payment_status = status;
+      }
+    }
     if (method) query.payment_method = method;
 
     const payments = await Payment.find(query)
       .populate('user_id', 'name email phone')
       .populate({
         path: 'booking_id',
-        select: 'booking_code booking_date start_time end_time status facility_id',
+        select: 'booking_code booking_date start_time end_time total_amount paid_amount status facility_id',
         populate: { path: 'facility_id', select: 'name' },
       })
       .sort({ createdAt: -1 });
+
+    const bookingIds = payments.map((p) => p.booking_id?._id).filter(Boolean);
+    const allBookingPayments = await Payment.find({ booking_id: { $in: bookingIds } }).sort({ createdAt: 1 });
+    const paymentsByBookingMap = {};
+    allBookingPayments.forEach((bp) => {
+      const bId = bp.booking_id.toString();
+      if (!paymentsByBookingMap[bId]) paymentsByBookingMap[bId] = [];
+      const proofUrl = bp.proof_of_payment_url || `/api/payments/proof/${bp._id}`;
+      paymentsByBookingMap[bId].push({ ...bp.toObject(), proof_of_payment_url: proofUrl });
+    });
 
     const mapped = payments.map((p) => {
       let proofUrl = p.proof_of_payment_url;
@@ -29,21 +82,31 @@ export const getPayments = async (req, res) => {
         proofUrl = `/api/payments/proof/${p._id}`;
         Payment.findByIdAndUpdate(p._id, { proof_of_payment_url: proofUrl }).catch((e) => console.error('Proof URL repair error:', e));
       }
+      const bObj = p.booking_id;
+      const totalAmount = bObj ? bObj.total_amount || 0 : 0;
+      const paidAmount = bObj ? bObj.paid_amount || 0 : 0;
+      const remainingBalance = Math.max(0, totalAmount - paidAmount);
+      const bId = bObj ? bObj._id.toString() : null;
+
       return {
         ...p.toObject(),
         id: p._id,
         _id: p._id,
         proof_of_payment_url: proofUrl,
+        all_payments: bId ? (paymentsByBookingMap[bId] || []) : [],
         user_id: p.user_id ? { _id: p.user_id._id, name: p.user_id.name, email: p.user_id.email, phone: p.user_id.phone } : null,
-        booking_id: p.booking_id
+        booking_id: bObj
           ? {
-              _id: p.booking_id._id,
-              booking_code: p.booking_id.booking_code,
-              booking_date: p.booking_id.booking_date,
-              start_time: p.booking_id.start_time,
-              end_time: p.booking_id.end_time,
-              status: p.booking_id.status,
-              facility_id: p.booking_id.facility_id ? { name: p.booking_id.facility_id.name } : null,
+              _id: bObj._id,
+              booking_code: bObj.booking_code,
+              booking_date: bObj.booking_date,
+              start_time: bObj.start_time,
+              end_time: bObj.end_time,
+              total_amount: totalAmount,
+              paid_amount: paidAmount,
+              remaining_balance: remainingBalance,
+              status: bObj.status,
+              facility_id: bObj.facility_id ? { name: bObj.facility_id.name } : null,
             }
           : null,
       };
@@ -55,44 +118,68 @@ export const getPayments = async (req, res) => {
   }
 };
 
-// Update Payment Status (Admin / Staff)
+// Update Payment Status (Admin / Staff Verification)
 export const updatePaymentStatus = async (req, res) => {
   try {
-    const { payment_status } = req.body;
-    const allowed = ['unpaid', 'paid', 'failed', 'refunded'];
+    const { payment_status, action } = req.body;
+    const allowed = ['unpaid', 'pending_verification', 'partially_paid', 'paid', 'failed', 'refunded'];
 
-    if (!allowed.includes(payment_status)) {
+    const targetStatus = action === 'verify' ? 'paid' : action === 'reject' ? 'failed' : payment_status;
+
+    if (!allowed.includes(targetStatus)) {
       return res.status(400).json({ success: false, message: 'Invalid payment status' });
     }
 
-    const updateFields = { payment_status };
-    if (payment_status === 'paid') {
-      updateFields.paid_at = new Date();
-      updateFields.proof_status = 'verified';
-    }
-
-    const payment = await Payment.findByIdAndUpdate(req.params.id, updateFields, { new: true })
-      .populate('user_id', 'name email')
-      .populate('booking_id', 'booking_code status');
-
+    const payment = await Payment.findById(req.params.id);
     if (!payment) {
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
 
-    // Also update booking status if payment is verified paid
-    if (payment_status === 'paid' && payment.booking_id) {
-      await Booking.findByIdAndUpdate(payment.booking_id._id, { status: 'approved' });
+    payment.payment_status = targetStatus;
+    if (targetStatus === 'paid') {
+      payment.paid_at = new Date();
+      payment.proof_status = 'verified';
+      payment.verification_status = 'verified';
+    } else if (targetStatus === 'failed') {
+      payment.proof_status = 'rejected';
+      payment.verification_status = 'rejected';
+    }
+    await payment.save();
+
+    let calcResult = null;
+    if (payment.booking_id) {
+      calcResult = await recalculateBookingPayments(payment.booking_id);
     }
 
-    if (payment_status === 'paid' && payment.user_id?.email) {
-      await sendPaymentReceiptEmail({
-        payment: payment.toObject(),
-        booking: { booking_code: payment.booking_id?.booking_code },
-        user: { name: payment.user_id.name, email: payment.user_id.email },
+    const updatedPayment = await Payment.findById(payment._id)
+      .populate('user_id', 'name email')
+      .populate('booking_id', 'booking_code total_amount paid_amount status');
+
+    if (targetStatus === 'paid' && updatedPayment?.user_id?.email) {
+      sendPaymentReceiptEmail({
+        payment: updatedPayment.toObject(),
+        booking: { booking_code: updatedPayment.booking_id?.booking_code },
+        user: { name: updatedPayment.user_id.name, email: updatedPayment.user_id.email },
       }).catch((err) => console.error('Payment receipt mailer error:', err));
+
+      if (updatedPayment.user_id._id) {
+        Notification.create({
+          user_id: updatedPayment.user_id._id,
+          booking_id: updatedPayment.booking_id?._id,
+          title: '🎉 Payment Verified & Approved!',
+          message: `Your payment proof for booking ${updatedPayment.booking_id?.booking_code || ''} has been verified. Your official PDF receipt is approved and ready to download!`,
+          type: 'payment_verified',
+          receipt_available: true,
+        }).catch((err) => console.error('Notification create error:', err));
+      }
     }
 
-    return res.json({ success: true, message: `Payment status updated to ${payment_status}`, payment });
+    return res.json({
+      success: true,
+      message: `Payment transaction ${targetStatus === 'paid' ? 'verified & approved' : 'updated to ' + targetStatus}`,
+      payment: updatedPayment,
+      booking_summary: calcResult,
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

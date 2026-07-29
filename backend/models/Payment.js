@@ -12,8 +12,18 @@ const paymentSchema = new mongoose.Schema(
     },
     payment_status: {
       type: String,
-      enum: ['unpaid', 'paid', 'failed', 'refunded'],
+      enum: ['unpaid', 'pending_verification', 'partially_paid', 'paid', 'failed', 'refunded'],
       default: 'unpaid',
+    },
+    transaction_type: {
+      type: String,
+      enum: ['full', 'partial_initial', 'partial_balance'],
+      default: 'full',
+    },
+    verification_status: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending',
     },
     reference_number: { type: String, default: null },
     paid_at: { type: Date, default: null },
@@ -24,7 +34,7 @@ const paymentSchema = new mongoose.Schema(
     proof_expires_at: { type: Date, default: null },
     proof_status: {
       type: String,
-      enum: ['none', 'uploaded', 'verified', 'expired_deleted'],
+      enum: ['none', 'uploaded', 'verified', 'rejected', 'expired_deleted'],
       default: 'none',
     },
   },

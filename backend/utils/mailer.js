@@ -61,6 +61,39 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
+// Send Password Reset Verification Code Email
+export const sendPasswordResetCodeEmail = async ({ email, name, code }) => {
+  const subject = `🔐 ${code} is your House of A's Password Verification Code`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+      <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 24px; text-align: center; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 20px; font-weight: 800;">House of A's Pickleball Court</h1>
+        <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Password Verification Code Request</p>
+      </div>
+
+      <div style="padding: 24px; color: #0f172a;">
+        <h2 style="font-size: 16px; font-weight: 700; margin-top: 0;">Hi ${name || 'Valued Player'},</h2>
+        <p style="font-size: 14px; color: #334155; line-height: 1.5;">
+          We received a request to reset the password for your House of A's account. Use the 6-digit verification code below to complete your password reset:
+        </p>
+
+        <div style="margin: 20px 0; text-align: center; background-color: #f8fafc; border: 2px dashed #10b981; padding: 18px; border-radius: 12px;">
+          <span style="font-family: monospace; font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #047857;">
+            ${code}
+          </span>
+          <p style="margin: 6px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600;">Valid for 15 minutes</p>
+        </div>
+
+        <p style="font-size: 12px; color: #64748b; line-height: 1.5;">
+          If you did not request a password reset, please ignore this email. Your password will remain unchanged.
+        </p>
+      </div>
+    </div>
+  `;
+
+  return await sendEmail({ to: email, subject, html });
+};
+
 // Email Base Wrapper Template
 const getEmailWrapper = (title, contentHtml) => `
 <!DOCTYPE html>

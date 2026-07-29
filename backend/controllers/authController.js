@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { sendWelcomeEmail, sendVerificationCodeEmail } from '../utils/mailer.js';
+import { sendWelcomeEmail, sendVerificationCodeEmail, sendPasswordResetCodeEmail } from '../utils/mailer.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'super_secret_sports_center_jwt_key_2026', {
@@ -259,6 +259,119 @@ export const updateProfile = async (req, res) => {
         phone: user.phone,
         role: user.role,
       },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 5. Forgot Password - Request 6-digit verification code
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please enter your registered email address.' });
+    }
+
+    const lowerEmail = email.toLowerCase();
+    const user = await User.findOne({ email: lowerEmail });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address.' });
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    user.reset_code = resetCode;
+    user.reset_code_expires = resetExpiresAt;
+    await user.save();
+
+    console.log(`[Forgot Password OTP Code] Email: ${lowerEmail} | Code: ${resetCode}`);
+
+    await sendPasswordResetCodeEmail({ email: lowerEmail, name: user.name, code: resetCode })
+      .catch((err) => console.error('Reset Password Mailer Error:', err));
+
+    return res.json({
+      success: true,
+      email: lowerEmail,
+      message: 'A 6-digit verification code has been sent to your email address.',
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 6. Verify Reset Code
+export const verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ success: false, message: 'Email and 6-digit verification code are required.' });
+    }
+
+    const lowerEmail = email.toLowerCase();
+    const user = await User.findOne({ email: lowerEmail });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (!user.reset_code || user.reset_code !== code.toString().trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code. Please check your email.' });
+    }
+
+    if (user.reset_code_expires && new Date(user.reset_code_expires) < new Date()) {
+      return res.status(400).json({ success: false, message: 'Verification code has expired. Please request a new code.' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Verification code confirmed. You can now set your new password.',
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 7. Set New Password
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, code, new_password } = req.body;
+
+    if (!email || !code || !new_password) {
+      return res.status(400).json({ success: false, message: 'Email, verification code, and new password are required.' });
+    }
+
+    if (new_password.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+    }
+
+    const lowerEmail = email.toLowerCase();
+    const user = await User.findOne({ email: lowerEmail });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (!user.reset_code || user.reset_code !== code.toString().trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+    }
+
+    if (user.reset_code_expires && new Date(user.reset_code_expires) < new Date()) {
+      return res.status(400).json({ success: false, message: 'Verification code has expired.' });
+    }
+
+    user.password = new_password;
+    user.reset_code = null;
+    user.reset_code_expires = null;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully! You can now log in with your new password.',
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

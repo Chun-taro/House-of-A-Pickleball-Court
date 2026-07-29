@@ -12,12 +12,19 @@ export const runProofCleanup = async () => {
     await connectDB();
     const now = new Date();
 
-    // Query payments where proof is uploaded and either proof_expires_at <= now OR proof_uploaded_at is older than 72 hours
+    const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+
+    // Query payments where proof is uploaded and image has been in the database for AT LEAST 72 hours (3 days)
     const expiredPayments = await Payment.find({
       proof_status: { $in: ['uploaded', 'verified'] },
       $or: [
-        { proof_expires_at: { $lte: now } },
-        { proof_uploaded_at: { $lte: new Date(Date.now() - 72 * 60 * 60 * 1000) } },
+        { proof_uploaded_at: { $ne: null, $lte: threeDaysAgo } },
+        { proof_expires_at: { $ne: null, $lte: now } },
+        {
+          proof_uploaded_at: null,
+          proof_expires_at: null,
+          createdAt: { $lte: threeDaysAgo },
+        },
       ],
     });
 

@@ -14,6 +14,7 @@ import FacilityCatalog from './pages/FacilityCatalog';
 import FacilityDetails from './pages/FacilityDetails';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 
 // Customer Pages
 import BookingWizard from './pages/customer/BookingWizard';
@@ -97,6 +98,7 @@ export default function App() {
               <Route path="/facilities/:id" element={<FacilityDetails />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
               {/* Customer Only Protected Routes */}
               <Route element={<ProtectedRoute roles={['customer']} />}>

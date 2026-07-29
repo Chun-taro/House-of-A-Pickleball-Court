@@ -153,19 +153,18 @@ export const generatePdfReceipt = (data, outputStream) => {
     .text('Status', 380, thY + 7)
     .text('Amount (PHP)', 470, thY + 7, { align: 'right' });
 
-  // Derive a human-readable payment status label
+  // Derive payment status and amounts
+  const totalAmount = booking.total_amount || 0;
+  const paidAmount = booking.paid_amount !== undefined ? booking.paid_amount : payment?.payment_status === 'paid' ? totalAmount : 0;
+  const remainingBalance = Math.max(0, totalAmount - paidAmount);
+
   let paymentStatusLabel;
-  if (payment?.payment_status === 'paid') {
-    paymentStatusLabel = 'PAID';
-  } else if (payment?.payment_status === 'refunded') {
-    paymentStatusLabel = 'REFUNDED';
-  } else if (payment?.payment_status === 'failed') {
-    paymentStatusLabel = 'FAILED';
-  } else if (isApproved) {
-    // Booking is approved but payment record not yet marked paid (shouldn't happen normally)
-    paymentStatusLabel = payment?.payment_method === 'cash' ? 'PENDING CASH PAYMENT' : 'PENDING VERIFICATION';
+  if (remainingBalance === 0 && (booking.status === 'approved' || payment?.payment_status === 'paid')) {
+    paymentStatusLabel = 'FULLY PAID';
+  } else if (paidAmount > 0) {
+    paymentStatusLabel = 'PARTIALLY PAID';
   } else {
-    paymentStatusLabel = 'PENDING APPROVAL';
+    paymentStatusLabel = 'PENDING VERIFICATION';
   }
 
   // Table Row
@@ -178,7 +177,7 @@ export const generatePdfReceipt = (data, outputStream) => {
     .text((payment?.payment_method || 'GCash').toUpperCase(), 250, trY)
     .text(paymentStatusLabel, 380, trY)
     .font('Helvetica-Bold')
-    .text(`PHP ${(booking.total_amount || 0).toFixed(2)}`, 470, trY, { align: 'right' });
+    .text(`PHP ${totalAmount.toFixed(2)}`, 470, trY, { align: 'right' });
 
   doc
     .moveTo(40, trY + 20)
@@ -189,18 +188,23 @@ export const generatePdfReceipt = (data, outputStream) => {
 
   // Total Summary Box
   const totalY = trY + 35;
-  doc.rect(320, totalY, 235, 45).fill('#ecfdf5').stroke('#a7f3d0');
+  doc.rect(260, totalY, 295, 60).fill('#ecfdf5').stroke('#a7f3d0');
 
   doc
     .fillColor('#065f46')
-    .fontSize(11)
+    .fontSize(9)
     .font('Helvetica-Bold')
-    .text('TOTAL AMOUNT PAID:', 330, totalY + 14)
-    .fontSize(16)
-    .text(`₱ ${(booking.total_amount || 0).toFixed(2)}`, 440, totalY + 12, { align: 'right' });
+    .text('TOTAL BOOKING FEE:', 270, totalY + 10)
+    .text(`PHP ${totalAmount.toFixed(2)}`, 440, totalY + 10, { align: 'right' })
+    .text('VERIFIED PAID AMOUNT:', 270, totalY + 25)
+    .text(`PHP ${paidAmount.toFixed(2)}`, 440, totalY + 25, { align: 'right' })
+    .fillColor(remainingBalance > 0 ? '#92400e' : '#065f46')
+    .text('REMAINING BALANCE:', 270, totalY + 40)
+    .fontSize(11)
+    .text(`PHP ${remainingBalance.toFixed(2)}`, 440, totalY + 39, { align: 'right' });
 
   // Storage Retention Notice Footer
-  const footerY = totalY + 75;
+  const footerY = totalY + 85;
   doc.rect(40, footerY, 515, 55).fill('#fffbeb').stroke('#fde68a');
 
   doc

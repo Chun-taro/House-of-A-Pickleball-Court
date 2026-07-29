@@ -6,13 +6,14 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ManualBookingModal from '../../components/ManualBookingModal';
 import StatusBadge from '../../components/StatusBadge';
-import { Plus, CalendarCheck, Clock, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, CalendarCheck, Clock, User, Phone, Mail, MapPin, X, FileText, CreditCard } from 'lucide-react';
 
 export default function CalendarView() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const fetchEvents = () => {
     axios.get('/api/bookings/admin/calendar-events')
@@ -33,6 +34,22 @@ export default function CalendarView() {
             backgroundColor: colorMap[e.status] || '#10b981',
             borderColor: colorMap[e.status] || '#10b981',
             textColor: '#ffffff',
+            extendedProps: {
+              status: e.status,
+              booking_code: e.booking_code,
+              customer_name: e.customer_name,
+              customer_email: e.customer_email,
+              customer_phone: e.customer_phone,
+              court_name: e.court_name,
+              facility_name: e.facility_name,
+              booking_date: e.booking_date,
+              start_time: e.start_time,
+              end_time: e.end_time,
+              payment_type: e.payment_type,
+              total_amount: e.total_amount,
+              paid_amount: e.paid_amount,
+              notes: e.notes,
+            },
           }));
 
           setEvents(mapped);
@@ -62,7 +79,7 @@ export default function CalendarView() {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm transition-colors"
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Manually Occupy Time Slot
         </button>
@@ -85,7 +102,7 @@ export default function CalendarView() {
 
       <div className="glass-card p-6 rounded-3xl space-y-4">
         {loading ? (
-          <div className="py-12 text-center text-slate-500">Loading calendar events...</div>
+          <div className="py-12 text-center text-slate-500 font-semibold">Loading calendar events...</div>
         ) : (
           <div className="calendar-container">
             <FullCalendar
@@ -103,6 +120,7 @@ export default function CalendarView() {
                 day: 'Day',
               }}
               dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
+              displayEventTime={false}
               events={events}
               slotMinTime="05:00:00"
               slotMaxTime="23:00:00"
@@ -110,10 +128,97 @@ export default function CalendarView() {
               allDaySlot={false}
               height="auto"
               contentHeight="auto"
+              eventClick={(info) => {
+                setSelectedEvent(info.event.extendedProps);
+              }}
             />
           </div>
         )}
       </div>
+
+      {/* Selected Event Details Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="glass-card p-6 rounded-3xl max-w-md w-full space-y-4 shadow-2xl relative bg-white border border-slate-200">
+            <button
+              onClick={() => setSelectedEvent(null)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {selectedEvent.booking_code || 'RESERVATION'}
+                </span>
+                <StatusBadge status={selectedEvent.status} />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2 pt-1">
+                <User className="w-5 h-5 text-emerald-600" />
+                {selectedEvent.customer_name}
+              </h3>
+            </div>
+
+            <div className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
+              <div className="flex items-center gap-2 text-slate-700 font-medium">
+                <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>
+                  <strong>Date & Time:</strong> {selectedEvent.booking_date} • {selectedEvent.start_time} - {selectedEvent.end_time}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-slate-700 font-medium">
+                <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>
+                  <strong>Court:</strong> {selectedEvent.court_name} {selectedEvent.facility_name ? `(${selectedEvent.facility_name})` : ''}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-slate-700 font-medium">
+                <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Phone:</strong> {selectedEvent.customer_phone}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-slate-700 font-medium">
+                <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>
+                  <strong>Email:</strong> {selectedEvent.customer_email}
+                </span>
+              </div>
+
+              {selectedEvent.total_amount !== undefined && (
+                <div className="flex items-center gap-2 text-slate-700 font-medium">
+                  <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Payment:</strong> ₱{selectedEvent.total_amount?.toFixed(2)} ({selectedEvent.payment_type === 'partial' ? 'Partial Deposit' : 'Full Payment'})
+                  </span>
+                </div>
+              )}
+
+              {selectedEvent.notes && (
+                <div className="flex items-start gap-2 text-slate-700 font-medium pt-1">
+                  <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Notes:</strong> {selectedEvent.notes}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs cursor-pointer transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual Booking Modal */}
       <ManualBookingModal

@@ -5,8 +5,9 @@ import { Trophy, Calendar, Clock, MapPin, CheckCircle2, Heart, ArrowRight, Star,
 import CourtAvailabilityCalendar from '../components/CourtAvailabilityCalendar';
 
 import logoImg from '../images/Logo.jpg';
-import courtImg from '../images/pickle ball court.jpg';
+import courtImg from '../images/bb02c1f8c38d725d863a91c3f74a3cc9.jpeg';
 import backgroundImg from '../images/background.jpg';
+import heroImg from '../images/IMG_6453.jpg';
 
 export default function Home() {
   const [facility, setFacility] = useState(null);
@@ -32,7 +33,7 @@ export default function Home() {
       <section className="relative overflow-hidden rounded-3xl p-5 sm:p-14 text-center text-white shadow-2xl border border-slate-800">
         {/* Background Image with Light Overlay for high visibility */}
         <div className="absolute inset-0 z-0">
-          <img src={backgroundImg} alt="House of A's Venue Background" className="w-full h-full object-cover object-center" />
+          <img src={heroImg} alt="House of A's Venue Background" className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/55 via-slate-950/35 to-slate-950/65"></div>
         </div>
 
@@ -189,6 +190,33 @@ export default function Home() {
             >
               Book Exclusive Court <ArrowRight className="w-4 h-4" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Photo Gallery Section */}
+      <section className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider border border-emerald-200">
+              <Trophy className="w-3.5 h-3.5" /> Venue Gallery
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Inside House of A's Court</h2>
+          </div>
+          <p className="text-xs text-slate-500 max-w-xs text-right hidden sm:block">Real photos from our Pickleball Court in Linabo, Malaybalay City.</p>
+        </div>
+
+        <div className="h-80 sm:h-[30rem] rounded-3xl overflow-hidden relative group shadow-xl border border-slate-200">
+          <img
+            src={courtImg}
+            alt="House of A's Pickleball Court - Interior Court View"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <span className="bg-slate-950/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700">
+              House of A's Pickleball Court · Linabo, Malaybalay City
+            </span>
           </div>
         </div>
       </section>

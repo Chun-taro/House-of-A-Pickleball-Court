@@ -5,6 +5,7 @@ import Court from '../models/Court.js';
 import OperatingHour from '../models/OperatingHour.js';
 import Holiday from '../models/Holiday.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { sendBookingConfirmationEmail, sendPaymentReceiptEmail } from '../utils/mailer.js';
 import { generatePdfReceipt } from '../utils/pdfReceiptGenerator.js';
 
@@ -179,7 +180,7 @@ export const checkAvailability = async (req, res) => {
 // Create a new booking (Customer)
 export const createBooking = async (req, res) => {
   try {
-    const { facility_id, court_id, booking_date, start_time, end_time, payment_method, notes } = req.body;
+    const { facility_id, court_id, booking_date, start_time, end_time, payment_method, notes, payment_type = 'full', partial_amount } = req.body;
 
     if (!facility_id || !court_id || !booking_date || !start_time || !end_time || !payment_method) {
       return res.status(400).json({ success: false, message: 'Please provide all required booking details.' });
@@ -196,7 +197,7 @@ export const createBooking = async (req, res) => {
     const activeBookings = await Booking.find({
       court_id,
       booking_date,
-      status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+      status: { $in: ['pending', 'partially_paid', 'approved', 'checked_in', 'completed'] },
     });
 
     const newStartMins = timeToMinutes(start_time);
@@ -219,6 +220,20 @@ export const createBooking = async (req, res) => {
     const tax_amount = 0;
     const total_amount = subtotal + tax_amount;
 
+    const isPartial = payment_type === 'partial';
+    const numPartialAmount = parseFloat(partial_amount) || 0;
+
+    if (isPartial) {
+      if (numPartialAmount <= 0 || numPartialAmount > total_amount) {
+        return res.status(400).json({
+          success: false,
+          message: `Partial payment amount must be greater than ₱0 and cannot exceed the total amount of ₱${total_amount.toFixed(2)}.`,
+        });
+      }
+    }
+
+    const initialPayAmount = isPartial ? numPartialAmount : total_amount;
+
     const dateCode = booking_date.replace(/-/g, '');
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const booking_code = `HOA-${dateCode}-${randomStr}`;
@@ -236,6 +251,8 @@ export const createBooking = async (req, res) => {
       subtotal,
       tax_amount,
       total_amount,
+      payment_type: isPartial ? 'partial' : 'full',
+      paid_amount: 0,
       status: 'pending',
       notes: notes || '',
     });
@@ -256,11 +273,13 @@ export const createBooking = async (req, res) => {
     const payment = await Payment.create({
       booking_id: booking._id,
       user_id: req.user._id,
-      amount: total_amount,
+      amount: initialPayAmount,
       payment_method,
-      payment_status: payment_method === 'cash' ? 'unpaid' : (hasProofFile ? 'unpaid' : (isPaidOnline ? 'paid' : 'unpaid')),
+      payment_status: payment_method === 'cash' ? 'unpaid' : 'pending_verification',
+      transaction_type: isPartial ? 'partial_initial' : 'full',
+      verification_status: 'pending',
       reference_number: refNum,
-      paid_at: (isPaidOnline && !hasProofFile) ? new Date() : null,
+      paid_at: null,
       proof_image_base64: base64Image,
       proof_filename: proofFilename,
       proof_of_payment_url: null,
@@ -289,6 +308,17 @@ export const createBooking = async (req, res) => {
         user: req.user,
       }).catch((err) => console.error('Payment mailer error:', err));
     }
+
+    // Notify Admin & Staff of new customer booking
+    await Notification.create({
+      user_id: req.user._id,
+      booking_id: booking._id,
+      title: `📌 New Booking: ${booking_code}`,
+      message: `Customer ${req.user.name} reserved ${court.name} on ${booking_date} (${start_time}-${end_time}). Method: ${payment_method.toUpperCase()}.`,
+      type: 'new_booking',
+      for_role: 'admin',
+      receipt_available: false,
+    }).catch((err) => console.error('Admin notification error:', err));
 
     return res.status(201).json({
       success: true,
@@ -451,6 +481,111 @@ export const getMyBookings = async (req, res) => {
   }
 };
 
+// Submit Second / Balance Payment for a Partially Paid Booking (Customer)
+export const submitBalancePayment = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const { amount, reference_number } = req.body;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
+    }
+
+    if (req.user.role === 'customer' && booking.user_id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to submit payment for this booking.' });
+    }
+
+    const allPayments = await Payment.find({ booking_id: booking._id });
+    const verifiedPaid = allPayments
+      .filter((p) => p.verification_status === 'verified' || p.payment_status === 'paid')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    const remainingBalance = Math.max(0, booking.total_amount - verifiedPaid);
+
+    if (remainingBalance <= 0) {
+      return res.status(400).json({ success: false, message: 'This booking is already fully paid.' });
+    }
+
+    const payAmount = parseFloat(amount) || remainingBalance;
+    if (payAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Payment amount must be greater than ₱0.' });
+    }
+
+    if (payAmount > remainingBalance + 0.01) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment amount (₱${payAmount.toFixed(2)}) cannot exceed the remaining balance of ₱${remainingBalance.toFixed(2)}.`,
+      });
+    }
+
+    const payMethod = req.body.payment_method || (req.file ? 'gcash' : 'cash');
+    const isCash = payMethod === 'cash';
+
+    if (!isCash && !req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload your GCash payment screenshot for the remaining balance.' });
+    }
+
+    let base64Image = null;
+    let proofFilename = null;
+    let uploadedAt = null;
+    let expiresAt = null;
+
+    if (req.file && req.file.buffer) {
+      base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      proofFilename = `proof_balance_${uniqueSuffix}`;
+      uploadedAt = new Date();
+      expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+    }
+
+    const refNum = reference_number || (isCash ? `CASH-BAL-${Math.random().toString(36).substring(2, 8).toUpperCase()}` : `PAY-BAL-${Math.random().toString(36).substring(2, 10).toUpperCase()}`);
+
+    const newPayment = await Payment.create({
+      booking_id: booking._id,
+      user_id: req.user._id,
+      amount: payAmount,
+      payment_method: isCash ? 'cash' : 'gcash',
+      payment_status: 'pending_verification',
+      transaction_type: 'partial_balance',
+      verification_status: 'pending',
+      reference_number: refNum,
+      paid_at: null,
+      proof_image_base64: base64Image,
+      proof_filename: proofFilename,
+      proof_uploaded_at: uploadedAt,
+      proof_expires_at: expiresAt,
+      proof_status: req.file ? 'uploaded' : 'none',
+      proof_of_payment_url: req.file ? `/api/payments/proof/` : null,
+    });
+
+    if (req.file) {
+      newPayment.proof_of_payment_url = `/api/payments/proof/${newPayment._id}`;
+      await newPayment.save();
+    }
+
+    // Notify Admin & Staff of balance payment / proof submission
+    await Notification.create({
+      user_id: req.user._id,
+      booking_id: booking._id,
+      title: `💳 Balance Payment Submitted: ${booking.booking_code}`,
+      message: `Customer ${req.user.name} submitted balance payment (₱${payAmount.toFixed(2)}) for booking ${booking.booking_code}. ${req.file ? 'Proof uploaded.' : 'Cash payment.'}`,
+      type: req.file ? 'proof_submitted' : 'new_booking',
+      for_role: 'admin',
+      receipt_available: false,
+    }).catch((err) => console.error('Admin balance notification error:', err));
+
+    return res.status(201).json({
+      success: true,
+      message: 'Balance payment screenshot submitted successfully! Pending admin verification.',
+      payment: newPayment,
+      remaining_balance: Math.max(0, remainingBalance - payAmount),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Get Single Booking Details
 export const getBookingById = async (req, res) => {
   try {
@@ -467,15 +602,30 @@ export const getBookingById = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized' });
     }
 
-    const payment = await Payment.findOne({ booking_id: booking._id });
+    const payments = await Payment.find({ booking_id: booking._id }).sort({ createdAt: -1 });
+
+    const totalVerifiedPaid = payments
+      .filter((p) => p.verification_status === 'verified' || p.payment_status === 'paid')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    const remainingBalance = Math.max(0, booking.total_amount - totalVerifiedPaid);
 
     const mapped = {
       ...booking.toObject(),
       id: booking._id,
       _id: booking._id,
+      paid_amount: totalVerifiedPaid,
+      remaining_balance: remainingBalance,
     };
 
-    return res.json({ success: true, booking: mapped, payment });
+    return res.json({
+      success: true,
+      booking: mapped,
+      payment: payments.length > 0 ? payments[0] : null,
+      payments,
+      paid_amount: totalVerifiedPaid,
+      remaining_balance: remainingBalance,
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -530,10 +680,16 @@ export const getAllBookingsAdmin = async (req, res) => {
       .populate('court_id', 'name')
       .sort({ createdAt: -1 });
 
-    const payments = await Payment.find({ booking_id: { $in: bookings.map((b) => b._id) } });
+    const payments = await Payment.find({ booking_id: { $in: bookings.map((b) => b._id) } }).sort({ createdAt: 1 });
     const paymentMap = {};
+    const paymentsListMap = {};
     payments.forEach((p) => {
-      paymentMap[p.booking_id.toString()] = p.toObject();
+      const bId = p.booking_id.toString();
+      if (!paymentsListMap[bId]) paymentsListMap[bId] = [];
+      const proofUrl = p.proof_of_payment_url || `/api/payments/proof/${p._id}`;
+      const pObj = { ...p.toObject(), proof_of_payment_url: proofUrl };
+      paymentsListMap[bId].push(pObj);
+      paymentMap[bId] = pObj;
     });
 
     const mapped = bookings.map((b) => ({
@@ -542,6 +698,7 @@ export const getAllBookingsAdmin = async (req, res) => {
       _id: b._id,
       user_id: b.user_id ? { _id: b.user_id._id, name: b.user_id.name, email: b.user_id.email, phone: b.user_id.phone } : { name: 'Walk-in Guest', email: '', phone: '' },
       payment: paymentMap[b._id.toString()] || null,
+      payments: paymentsListMap[b._id.toString()] || [],
     }));
 
     return res.json({ success: true, bookings: mapped });
@@ -550,23 +707,34 @@ export const getAllBookingsAdmin = async (req, res) => {
   }
 };
 
-// Admin/Staff: Calendar Events API (Includes Customer Name in Title)
+// Admin/Staff: Calendar Events API (Includes Customer Name in Title & Details)
 export const getCalendarEventsAdmin = async (req, res) => {
   try {
     const bookings = await Booking.find({ status: { $ne: 'cancelled' } })
-      .populate('user_id', 'name')
-      .populate('court_id', 'name');
+      .populate('user_id', 'name email phone')
+      .populate('court_id', 'name')
+      .populate('facility_id', 'name');
 
     const events = bookings.map((b) => {
       const customerName = b.user_id?.name || 'Walk-in Customer';
       return {
         id: b._id,
-        title: `${customerName} - ${b.court_id?.name || 'Court'}`,
+        title: `${customerName} (${b.court_id?.name || 'Court'})`,
         start: `${b.booking_date}T${b.start_time}`,
         end: `${b.booking_date}T${b.end_time}`,
         status: b.status,
         booking_code: b.booking_code,
         customer_name: customerName,
+        customer_email: b.user_id?.email || 'N/A',
+        customer_phone: b.user_id?.phone || 'N/A',
+        court_name: b.court_id?.name || 'Court',
+        facility_name: b.facility_id?.name || '',
+        booking_date: b.booking_date,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        payment_type: b.payment_type,
+        total_amount: b.total_amount,
+        paid_amount: b.paid_amount,
         notes: b.notes,
       };
     });
@@ -581,46 +749,108 @@ export const getCalendarEventsAdmin = async (req, res) => {
 export const updateBookingStatusAdmin = async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatuses = ['approved', 'rejected', 'checked_in', 'completed', 'cancelled'];
+    const allowedStatuses = ['partially_paid', 'approved', 'rejected', 'checked_in', 'completed', 'cancelled'];
 
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
-    const booking = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });
-
-    if (!booking) {
+    const targetBooking = await Booking.findById(req.params.id);
+    if (!targetBooking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (status === 'approved') {
-      // Mark any linked payment as paid on admin approval (covers both cash and GCash)
-      await Payment.findOneAndUpdate(
-        { booking_id: booking._id, payment_status: { $ne: 'paid' } },
-        { payment_status: 'paid', paid_at: new Date() }
-      );
+    if (status === 'partially_paid') {
+      const payments = await Payment.find({ booking_id: targetBooking._id }).sort({ createdAt: 1 });
+      if (payments.length > 0) {
+        payments[0].payment_status = 'paid';
+        payments[0].verification_status = 'verified';
+        payments[0].proof_status = 'verified';
+        payments[0].paid_at = payments[0].paid_at || new Date();
+        await payments[0].save();
+      }
+
+      const allPayments = await Payment.find({ booking_id: targetBooking._id });
+      const totalVerifiedPaid = allPayments
+        .filter((p) => p.verification_status === 'verified' || p.payment_status === 'paid')
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      targetBooking.paid_amount = totalVerifiedPaid;
+      targetBooking.status = 'partially_paid';
+    } else if (status === 'approved' || status === 'checked_in') {
+      const payments = await Payment.find({ booking_id: targetBooking._id });
+      for (const p of payments) {
+        p.payment_status = 'paid';
+        p.verification_status = 'verified';
+        p.proof_status = 'verified';
+        p.paid_at = p.paid_at || new Date();
+        await p.save();
+      }
+      targetBooking.paid_amount = targetBooking.total_amount;
+      targetBooking.status = status;
+    } else {
+      targetBooking.status = status;
     }
 
-    return res.json({ success: true, message: `Booking status updated to ${status}` });
+    await targetBooking.save();
+
+    if (targetBooking.user_id) {
+      let title = 'Booking Status Update';
+      let message = `Your booking ${targetBooking.booking_code} status is now ${targetBooking.status}.`;
+      let notifType = 'general';
+
+      if (targetBooking.status === 'approved') {
+        title = '🎉 Booking Approved & Ready!';
+        message = `Great news! Your booking ${targetBooking.booking_code} has been approved by admin. Your official PDF receipt is good to go and ready to download!`;
+        notifType = 'booking_approved';
+      } else if (targetBooking.status === 'partially_paid') {
+        title = '✅ Initial Deposit Verified!';
+        message = `Your initial deposit for booking ${targetBooking.booking_code} was verified. Your reservation is confirmed and receipt is ready for download!`;
+        notifType = 'payment_verified';
+      } else if (targetBooking.status === 'rejected') {
+        title = '⚠️ Booking Verification Status';
+        message = `Your booking request ${targetBooking.booking_code} could not be approved by administrator.`;
+        notifType = 'booking_rejected';
+      }
+
+      await Notification.create({
+        user_id: targetBooking.user_id,
+        booking_id: targetBooking._id,
+        title,
+        message,
+        type: notifType,
+        receipt_available: true,
+      }).catch((err) => console.error('Notification creation error:', err));
+    }
+
+    return res.json({ success: true, message: `Booking status updated to ${targetBooking.status}`, booking: targetBooking });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Public: Calendar Events API (Anonymized for public viewing)
+// Public: Calendar Events API (Includes customer name for landing page schedule viewer)
 export const getPublicCalendarEvents = async (req, res) => {
   try {
     const bookings = await Booking.find({ status: { $in: ['pending', 'approved', 'checked_in', 'completed'] } })
+      .populate('user_id', 'name')
       .populate('court_id', 'name');
 
-    const events = bookings.map((b) => ({
-      id: b._id,
-      title: 'Reserved',
-      start: `${b.booking_date}T${b.start_time}`,
-      end: `${b.booking_date}T${b.end_time}`,
-      status: b.status,
-      court_name: b.court_id?.name || 'Court',
-    }));
+    const events = bookings.map((b) => {
+      const customerName = b.user_id?.name || 'Reserved Customer';
+      return {
+        id: b._id,
+        title: `Reserved: ${customerName}`,
+        start: `${b.booking_date}T${b.start_time}`,
+        end: `${b.booking_date}T${b.end_time}`,
+        status: b.status,
+        customer_name: customerName,
+        court_name: b.court_id?.name || 'Court',
+        booking_date: b.booking_date,
+        start_time: b.start_time,
+        end_time: b.end_time,
+      };
+    });
 
     return res.json({ success: true, events });
   } catch (error) {
