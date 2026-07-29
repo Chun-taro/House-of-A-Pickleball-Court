@@ -97,7 +97,7 @@ export default function ReportsAdmin() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
         {/* Gross Revenue */}
         <div className="glass-card p-6 rounded-3xl space-y-4 border border-emerald-500/20 bg-gradient-to-br from-white via-emerald-50/30 to-white shadow-xl hover:shadow-2xl transition-all">
           <div className="flex items-center justify-between">

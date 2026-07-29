@@ -180,10 +180,14 @@ export const checkAvailability = async (req, res) => {
 // Create a new booking (Customer)
 export const createBooking = async (req, res) => {
   try {
-    const { facility_id, court_id, booking_date, start_time, end_time, payment_method, notes, payment_type = 'full', partial_amount } = req.body;
+    const { facility_id, court_id, booking_date, start_time, end_time, notes } = req.body;
 
-    if (!facility_id || !court_id || !booking_date || !start_time || !end_time || !payment_method) {
+    if (!facility_id || !court_id || !booking_date || !start_time || !end_time) {
       return res.status(400).json({ success: false, message: 'Please provide all required booking details.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a proof of payment screenshot for GCash transfer before submitting.' });
     }
 
     const facility = await Facility.findById(facility_id);
@@ -220,20 +224,6 @@ export const createBooking = async (req, res) => {
     const tax_amount = 0;
     const total_amount = subtotal + tax_amount;
 
-    const isPartial = payment_type === 'partial';
-    const numPartialAmount = parseFloat(partial_amount) || 0;
-
-    if (isPartial) {
-      if (numPartialAmount <= 0 || numPartialAmount > total_amount) {
-        return res.status(400).json({
-          success: false,
-          message: `Partial payment amount must be greater than ₱0 and cannot exceed the total amount of ₱${total_amount.toFixed(2)}.`,
-        });
-      }
-    }
-
-    const initialPayAmount = isPartial ? numPartialAmount : total_amount;
-
     const dateCode = booking_date.replace(/-/g, '');
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const booking_code = `HOA-${dateCode}-${randomStr}`;
@@ -251,32 +241,32 @@ export const createBooking = async (req, res) => {
       subtotal,
       tax_amount,
       total_amount,
-      payment_type: isPartial ? 'partial' : 'full',
+      payment_type: 'full',
       paid_amount: 0,
       status: 'pending',
       notes: notes || '',
     });
 
-    const isPaidOnline = payment_method !== 'cash';
-    const refNum = req.body.reference_number || (isPaidOnline ? `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}` : null);
+    const payment_method = 'gcash';
+    const refNum = req.body.reference_number || `PAY-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
-    const hasProofFile = !!req.file;
+    const hasProofFile = true;
     let base64Image = null;
-    if (hasProofFile && req.file.buffer) {
+    if (req.file && req.file.buffer) {
       base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
     const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const proofFilename = hasProofFile ? `proof_${uniqueSuffix}` : null;
-    const proofUploadedAt = hasProofFile ? new Date() : null;
-    const proofExpiresAt = hasProofFile ? new Date(Date.now() + 72 * 60 * 60 * 1000) : null;
+    const proofFilename = `proof_${uniqueSuffix}`;
+    const proofUploadedAt = new Date();
+    const proofExpiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
     const payment = await Payment.create({
       booking_id: booking._id,
       user_id: req.user._id,
-      amount: initialPayAmount,
-      payment_method,
-      payment_status: payment_method === 'cash' ? 'unpaid' : 'pending_verification',
-      transaction_type: isPartial ? 'partial_initial' : 'full',
+      amount: total_amount,
+      payment_method: 'gcash',
+      payment_status: 'pending_verification',
+      transaction_type: 'full',
       verification_status: 'pending',
       reference_number: refNum,
       paid_at: null,
@@ -343,7 +333,7 @@ export const createManualBookingAdmin = async (req, res) => {
       customer_name,
       customer_email,
       customer_phone,
-      payment_method = 'cash',
+      payment_method = 'gcash',
       payment_status = 'paid',
       notes = '',
     } = req.body;
@@ -519,10 +509,7 @@ export const submitBalancePayment = async (req, res) => {
       });
     }
 
-    const payMethod = req.body.payment_method || (req.file ? 'gcash' : 'cash');
-    const isCash = payMethod === 'cash';
-
-    if (!isCash && !req.file) {
+    if (!req.file) {
       return res.status(400).json({ success: false, message: 'Please upload your GCash payment screenshot for the remaining balance.' });
     }
 
@@ -539,13 +526,13 @@ export const submitBalancePayment = async (req, res) => {
       expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
     }
 
-    const refNum = reference_number || (isCash ? `CASH-BAL-${Math.random().toString(36).substring(2, 8).toUpperCase()}` : `PAY-BAL-${Math.random().toString(36).substring(2, 10).toUpperCase()}`);
+    const refNum = reference_number || `PAY-BAL-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
     const newPayment = await Payment.create({
       booking_id: booking._id,
       user_id: req.user._id,
       amount: payAmount,
-      payment_method: isCash ? 'cash' : 'gcash',
+      payment_method: 'gcash',
       payment_status: 'pending_verification',
       transaction_type: 'partial_balance',
       verification_status: 'pending',
@@ -555,8 +542,8 @@ export const submitBalancePayment = async (req, res) => {
       proof_filename: proofFilename,
       proof_uploaded_at: uploadedAt,
       proof_expires_at: expiresAt,
-      proof_status: req.file ? 'uploaded' : 'none',
-      proof_of_payment_url: req.file ? `/api/payments/proof/` : null,
+      proof_status: 'uploaded',
+      proof_of_payment_url: `/api/payments/proof/`,
     });
 
     if (req.file) {
@@ -569,8 +556,8 @@ export const submitBalancePayment = async (req, res) => {
       user_id: req.user._id,
       booking_id: booking._id,
       title: `💳 Balance Payment Submitted: ${booking.booking_code}`,
-      message: `Customer ${req.user.name} submitted balance payment (₱${payAmount.toFixed(2)}) for booking ${booking.booking_code}. ${req.file ? 'Proof uploaded.' : 'Cash payment.'}`,
-      type: req.file ? 'proof_submitted' : 'new_booking',
+      message: `Customer ${req.user.name} submitted GCash balance payment (₱${payAmount.toFixed(2)}) for booking ${booking.booking_code}. Proof uploaded.`,
+      type: 'proof_submitted',
       for_role: 'admin',
       receipt_available: false,
     }).catch((err) => console.error('Admin balance notification error:', err));

@@ -50,10 +50,10 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-1.5 lg:space-x-2">
             <Link
               to="/"
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all ${
                 isActive('/') 
                   ? 'text-white bg-slate-800/90 border border-slate-700' 
                   : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
@@ -66,18 +66,18 @@ export default function Navbar() {
               <>
                 <Link
                   to="/booking/wizard"
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     isActive('/booking/wizard') 
                       ? 'text-white bg-emerald-600 border border-emerald-500 shadow-md shadow-emerald-600/20' 
                       : 'text-emerald-300 hover:text-white hover:bg-emerald-950/60 border border-emerald-900/40'
                   }`}
                 >
-                  <Calendar className="w-4 h-4 text-emerald-400" />
+                  <Calendar className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-emerald-400" />
                   Book Court Slot
                 </Link>
                 <Link
                   to="/my-bookings"
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all ${
                     isActive('/my-bookings') 
                       ? 'text-white bg-slate-800/90 border border-slate-700' 
                       : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
@@ -91,9 +91,9 @@ export default function Navbar() {
             {(user?.role === 'admin' || user?.role === 'staff') && (
               <Link
                 to="/admin/dashboard"
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-emerald-300 hover:text-emerald-100 transition-all flex items-center gap-2 bg-gradient-to-r from-emerald-950/90 to-teal-950/80 hover:from-emerald-900 hover:to-teal-900 border border-emerald-800/80 shadow-sm"
+                className="px-3 py-1.5 lg:px-4 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold text-emerald-300 hover:text-emerald-100 transition-all flex items-center gap-1.5 bg-gradient-to-r from-emerald-950/90 to-teal-950/80 hover:from-emerald-900 hover:to-teal-900 border border-emerald-800/80 shadow-sm"
               >
-                <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                <LayoutDashboard className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-emerald-400" />
                 Management Portal
               </Link>
             )}

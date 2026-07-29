@@ -25,9 +25,8 @@ export default function BookingWizard() {
   const [slots, setSlots] = useState([]);
   const [hourlyRate, setHourlyRate] = useState(150);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [paymentType, setPaymentType] = useState('full'); // 'full' | 'partial'
-  const [partialAmountInput, setPartialAmountInput] = useState('');
+  const [paymentMethod] = useState('gcash');
+  const [paymentType] = useState('full');
   const [notes, setNotes] = useState('');
   
   // GCash Proof Upload & QR Modal State
@@ -139,22 +138,9 @@ export default function BookingWizard() {
       return;
     }
 
-    if (paymentMethod === 'gcash' && !proofFile) {
+    if (!proofFile) {
       setMessage({ type: 'error', text: 'Please upload a proof of payment screenshot for GCash transfer before submitting.' });
       return;
-    }
-
-    const slotPrice = selectedSlot ? selectedSlot.price : totalAmountDue;
-
-    if (paymentMethod === 'gcash' && paymentType === 'partial') {
-      const pAmt = parseFloat(partialAmountInput);
-      if (isNaN(pAmt) || pAmt <= 0 || pAmt > slotPrice) {
-        setMessage({
-          type: 'error',
-          text: `Please enter a valid partial payment amount between ₱1 and ₱${slotPrice.toFixed(2)}.`,
-        });
-        return;
-      }
     }
 
     setSubmitting(true);
@@ -167,13 +153,8 @@ export default function BookingWizard() {
       formData.append('booking_date', bookingDate);
       formData.append('start_time', selectedSlot.start_time);
       formData.append('end_time', selectedSlot.end_time);
-      formData.append('payment_method', paymentMethod);
-      formData.append('payment_type', paymentMethod === 'gcash' ? paymentType : 'full');
-
-      if (paymentMethod === 'gcash' && paymentType === 'partial') {
-        formData.append('partial_amount', parseFloat(partialAmountInput));
-      }
-
+      formData.append('payment_method', 'gcash');
+      formData.append('payment_type', 'full');
       formData.append('notes', notes);
       if (referenceNumber) formData.append('reference_number', referenceNumber);
       if (proofFile) formData.append('proof_image', proofFile);
@@ -345,7 +326,7 @@ export default function BookingWizard() {
             ) : slots.length === 0 ? (
               <p className="text-xs text-amber-700 py-4">No available consecutive {durationHours}-hour slots for the selected date.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {slots.map((slot, idx) => {
                   const isSelected = selectedSlot?.start_time === slot.start_time;
                   return (
@@ -391,14 +372,10 @@ export default function BookingWizard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700">Payment Option</label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-4 py-2.5 slate-input rounded-xl text-sm font-semibold"
-              >
-                <option value="cash">Cash (Pay at Court Counter)</option>
-                <option value="gcash">GCash Transfer (Upload Proof Required)</option>
-              </select>
+              <div className="w-full px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-sm font-extrabold text-blue-900 flex items-center justify-between">
+                <span>GCash Transfer</span>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white px-2.5 py-0.5 rounded-full">100% Full Payment</span>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -414,109 +391,18 @@ export default function BookingWizard() {
           </div>
 
           {/* GCash Upload & Transfer Container */}
-          {paymentMethod === 'gcash' && (
-            <div className="p-5 rounded-2xl bg-blue-50/90 border border-blue-200 space-y-4 text-xs">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-blue-200/80 pb-3">
-                <div>
-                  <h3 className="font-extrabold text-blue-950 text-sm flex items-center gap-1.5">
-                    <Smartphone className="w-4 h-4 text-blue-700" /> GCash Scan QR & Payment Instructions
-                  </h3>
-                  <p className="text-blue-800 text-[11px]">Send exact booking amount via GCash QR scan or Express Send before uploading proof screenshot.</p>
-                </div>
-                <div className="bg-blue-600 text-white px-3 py-1 rounded-full font-extrabold text-[10px] uppercase tracking-wider shadow-xs">
-                  Official Account
-                </div>
+          <div className="p-5 rounded-2xl bg-blue-50/90 border border-blue-200 space-y-4 text-xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-blue-200/80 pb-3">
+              <div>
+                <h3 className="font-extrabold text-blue-950 text-sm flex items-center gap-1.5">
+                  <Smartphone className="w-4 h-4 text-blue-700" /> GCash Scan QR & Payment Instructions
+                </h3>
+                <p className="text-blue-800 text-[11px]">Send exact full booking amount via GCash QR scan or Express Send before uploading proof screenshot.</p>
               </div>
-              {/* Full vs Partial Payment Selector */}
-              <div className="p-4 rounded-xl bg-white border border-blue-200 space-y-3">
-                <label className="font-extrabold text-blue-950 text-xs block">Choose Payment Type:</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label
-                    onClick={() => setPaymentType('full')}
-                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
-                      paymentType === 'full'
-                        ? 'border-blue-600 bg-blue-50/70 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentTypeChoice"
-                      checked={paymentType === 'full'}
-                      onChange={() => setPaymentType('full')}
-                      className="mt-0.5 text-blue-600"
-                    />
-                    <div>
-                      <span className="font-extrabold text-slate-900 text-xs block">Full Payment</span>
-                      <span className="text-[11px] text-slate-600 font-medium">
-                        Pay total amount of <strong>₱{(selectedSlot ? selectedSlot.price : totalAmountDue).toFixed(2)}</strong> now
-                      </span>
-                    </div>
-                  </label>
-
-                  <label
-                    onClick={() => {
-                      setPaymentType('partial');
-                      if (!partialAmountInput) {
-                        const defaultPartial = ((selectedSlot ? selectedSlot.price : totalAmountDue) / 2).toFixed(2);
-                        setPartialAmountInput(defaultPartial);
-                      }
-                    }}
-                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex items-start gap-3 ${
-                      paymentType === 'partial'
-                        ? 'border-blue-600 bg-blue-50/70 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentTypeChoice"
-                      checked={paymentType === 'partial'}
-                      onChange={() => setPaymentType('partial')}
-                      className="mt-0.5 text-blue-600"
-                    />
-                    <div>
-                      <span className="font-extrabold text-slate-900 text-xs block">Partial Payment (Deposit)</span>
-                      <span className="text-[11px] text-slate-600 font-medium">
-                        Pay a deposit now, remaining balance before/at game
-                      </span>
-                    </div>
-                  </label>
-                </div>
-
-                {/* Custom Partial Payment Input */}
-                {paymentType === 'partial' && (
-                  <div className="p-3.5 rounded-xl bg-blue-100/50 border border-blue-200 space-y-2 mt-2">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <label className="font-bold text-slate-800 text-xs">Enter Partial Amount to Pay Now (₱):</label>
-                      <span className="text-[10px] text-blue-900 font-extrabold bg-blue-200/80 px-2 py-0.5 rounded-md">
-                        Total Booking: ₱{(selectedSlot ? selectedSlot.price : totalAmountDue).toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="relative max-w-xs">
-                      <span className="absolute left-3.5 top-2.5 text-sm font-black text-slate-500">₱</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max={selectedSlot ? selectedSlot.price : totalAmountDue}
-                        step="0.01"
-                        value={partialAmountInput}
-                        onChange={(e) => setPartialAmountInput(e.target.value)}
-                        placeholder="Enter amount..."
-                        className="w-full pl-8 pr-4 py-2 bg-white border border-blue-300 rounded-xl text-sm font-extrabold text-slate-900 focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-
-                    {partialAmountInput && !isNaN(parseFloat(partialAmountInput)) && (
-                      <div className="text-[11px] text-slate-700 font-medium pt-1 flex flex-wrap gap-3">
-                        <span>Paying Now: <strong className="text-emerald-700 font-bold">₱{parseFloat(partialAmountInput).toFixed(2)}</strong></span>
-                        <span>Remaining Balance Later: <strong className="text-amber-800 font-bold">₱{Math.max(0, (selectedSlot ? selectedSlot.price : totalAmountDue) - parseFloat(partialAmountInput)).toFixed(2)}</strong></span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              <div className="bg-blue-600 text-white px-3 py-1 rounded-full font-extrabold text-[10px] uppercase tracking-wider shadow-xs">
+                Official Account
               </div>
+            </div>
 
               {/* QR & Account Card */}
               <div className="flex flex-col sm:flex-row items-center gap-5 bg-white p-4 sm:p-5 rounded-2xl border border-blue-200 shadow-sm">
@@ -623,7 +509,6 @@ export default function BookingWizard() {
                 </div>
               </div>
             </div>
-          )}
 
           {/* Pricing Breakdown Box */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 text-white grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm border border-slate-800 shadow-sm">

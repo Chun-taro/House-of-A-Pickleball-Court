@@ -65,7 +65,7 @@ const AdminLayout = () => {
       </div>
 
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 bg-slate-100/60 overflow-y-auto w-full">
+      <main className="flex-1 bg-slate-100/60 overflow-y-auto min-w-0 w-full">
         <Outlet />
       </main>
     </div>

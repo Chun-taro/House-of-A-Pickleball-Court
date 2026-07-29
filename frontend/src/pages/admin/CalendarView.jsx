@@ -70,11 +70,11 @@ export default function CalendarView() {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
+    <div className="p-3 sm:p-6 md:p-8 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Court Schedule Calendar</h1>
-          <p className="text-sm text-slate-600">Visual timetable of booked slots and manual reservations (5:00 AM - 11:00 PM)</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Court Schedule Calendar</h1>
+          <p className="text-xs sm:text-sm text-slate-600">Visual timetable of booked slots and manual reservations (5:00 AM - 11:00 PM)</p>
         </div>
 
         <button
@@ -100,7 +100,7 @@ export default function CalendarView() {
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-500"></span> Completed</span>
       </div>
 
-      <div className="glass-card p-6 rounded-3xl space-y-4">
+      <div className="glass-card p-3 sm:p-6 rounded-3xl space-y-4 overflow-x-auto">
         {loading ? (
           <div className="py-12 text-center text-slate-500 font-semibold">Loading calendar events...</div>
         ) : (

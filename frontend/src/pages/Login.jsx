@@ -5,8 +5,9 @@ import { Mail, Lock, LogIn, AlertCircle, ShieldCheck, RefreshCw } from 'lucide-r
 import logoImg from '../images/Logo.jpg';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('remember_me_email') || '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('remember_me_email'));
   const [otpCode, setOtpCode] = useState('');
   const [requiresOtp, setRequiresOtp] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
@@ -25,6 +26,11 @@ export default function Login() {
 
     const res = await login(email, password);
     if (res.success) {
+      if (rememberMe) {
+        localStorage.setItem('remember_me_email', email);
+      } else {
+        localStorage.removeItem('remember_me_email');
+      }
       if (res.user.role === 'admin' || res.user.role === 'staff') {
         navigate('/admin/dashboard');
       } else {
@@ -156,6 +162,19 @@ export default function Login() {
                   className="w-full pl-10 pr-4 py-2.5 slate-input rounded-xl text-sm"
                 />
               </div>
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 accent-emerald-600 cursor-pointer"
+                />
+                <span>Remember me</span>
+              </label>
             </div>
 
             <button

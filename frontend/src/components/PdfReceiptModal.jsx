@@ -14,7 +14,7 @@ export default function PdfReceiptModal({ booking, isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-      <div className="glass-card p-4 sm:p-6 rounded-3xl max-w-4xl w-full space-y-4 shadow-2xl relative border border-slate-200/80 bg-white">
+      <div className="glass-card p-4 sm:p-6 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto space-y-4 shadow-2xl relative border border-slate-200/80 bg-white">
         
         {/* Close Button */}
         <button

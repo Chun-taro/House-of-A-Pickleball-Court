@@ -132,7 +132,7 @@ export default function FacilityDetails() {
               Morning Open Session Promo
             </span>
             <h3 className="text-2xl font-black text-white mt-1">OPEN COURT FREE PLAY (5:00 AM – 1:00 PM)</h3>
-            <p className="text-xs text-slate-300">Enjoy up to 8 hours of play for just <strong>₱70 / person</strong>. Limited to 16 players. Payment is cash only at house.</p>
+            <p className="text-xs text-slate-300">Enjoy up to 8 hours of play for just <strong>₱70 / person</strong>. Limited to 16 players. Payment is via GCash online transfer.</p>
           </div>
           <div className="bg-slate-900 px-4 py-2 rounded-xl border border-emerald-500/40 text-center shrink-0">
             <span className="text-xl font-black text-emerald-300 font-mono">₱70</span>

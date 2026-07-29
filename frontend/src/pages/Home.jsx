@@ -169,7 +169,7 @@ export default function Home() {
               <div className="text-4xl sm:text-5xl font-black text-emerald-300 font-mono tracking-tight drop-shadow-md">
                 ₱70 <span className="text-xs text-slate-300 font-sans font-extrabold uppercase">/ person</span>
               </div>
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Morning Open Play • Walk-in Cash</p>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Morning Open Play • GCash Payment</p>
             </div>
           </div>
         </div>
@@ -209,14 +209,14 @@ export default function Home() {
             </p>
           </div>
 
-          {/* 4. Cash Only */}
+          {/* 4. GCash Only */}
           <div className="p-5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-slate-800 space-y-3 hover:border-teal-400/60 hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
             <div className="w-11 h-11 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold shadow-xs">
               <Banknote className="w-6 h-6" />
             </div>
-            <h3 className="font-black text-white text-base">Cash Payment Only</h3>
+            <h3 className="font-black text-white text-base">GCash Online Payment</h3>
             <p className="text-slate-300 leading-relaxed font-medium">
-              Payment for Open Court Free Play is <strong>cash only</strong> and can be made at the house upon arrival.
+              All reservations are paid <strong>100% upfront via GCash</strong> transfer with screenshot proof.
             </p>
           </div>
         </div>
@@ -506,7 +506,7 @@ export default function Home() {
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-extrabold text-slate-900">Instant Confirmation</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">Reserve cash or GCash online, get your digital booking code, and bring your paddles to play!</p>
+          <p className="text-sm text-slate-600 leading-relaxed">Reserve online via GCash, get your digital booking code, and bring your paddles to play!</p>
         </div>
       </section>
 

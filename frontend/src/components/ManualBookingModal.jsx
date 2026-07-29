@@ -13,7 +13,7 @@ export default function ManualBookingModal({ isOpen, onClose, onSuccess }) {
   const [endTime, setEndTime] = useState('16:00');
   const [customerName, setCustomerName] = useState('Walk-in Player');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('gcash');
   const [paymentStatus, setPaymentStatus] = useState('paid');
   const [notes, setNotes] = useState('Manual Walk-in Reservation');
 
@@ -216,8 +216,8 @@ export default function ManualBookingModal({ isOpen, onClose, onSuccess }) {
                 onChange={(e) => setPaymentStatus(e.target.value)}
                 className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-emerald-500"
               >
-                <option value="paid">Paid Cash</option>
-                <option value="unpaid">Unpaid / Pay Later</option>
+                <option value="paid">Paid via GCash</option>
+                <option value="unpaid">Pending GCash Payment</option>
               </select>
             </div>
           </div>

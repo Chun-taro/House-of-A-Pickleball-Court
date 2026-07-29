@@ -265,14 +265,9 @@ export default function BookingDetails() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-800">Payment Option</label>
-                  <select
-                    value={balancePaymentMethod}
-                    onChange={(e) => setBalancePaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-900"
-                  >
-                    <option value="cash">Cash at Counter (No Proof Needed)</option>
-                    <option value="gcash">GCash Transfer (Upload Proof)</option>
-                  </select>
+                  <div className="w-full px-3 py-2 bg-amber-100 border border-amber-300 rounded-xl text-xs font-extrabold text-amber-950">
+                    GCash Transfer (Upload Proof)
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="font-bold text-slate-800">Amount Paying Now (₱)</label>
@@ -299,26 +294,19 @@ export default function BookingDetails() {
                 </div>
               </div>
 
-              {balancePaymentMethod === 'gcash' ? (
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-800 block">Upload Screenshot Proof of Second Payment *</label>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/jpg"
-                    onChange={handleBalanceFileChange}
-                    required
-                    className="w-full p-2 bg-white border border-amber-300 rounded-xl text-xs"
-                  />
-                  {balanceProofPreview && (
-                    <img src={balanceProofPreview} alt="Second Payment Proof Preview" className="w-20 h-20 object-cover rounded-xl border mt-2" />
-                  )}
-                </div>
-              ) : (
-                <div className="p-3 bg-emerald-100/70 border border-emerald-300 rounded-xl text-emerald-950 font-medium text-[11px] flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span>Cash Payment Selected: No proof screenshot required. Pay your remaining balance directly at the court counter.</span>
-                </div>
-              )}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-800 block">Upload Screenshot Proof of Second Payment *</label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  onChange={handleBalanceFileChange}
+                  required
+                  className="w-full p-2 bg-white border border-amber-300 rounded-xl text-xs"
+                />
+                {balanceProofPreview && (
+                  <img src={balanceProofPreview} alt="Second Payment Proof Preview" className="w-20 h-20 object-cover rounded-xl border mt-2" />
+                )}
+              </div>
 
               <button
                 type="submit"

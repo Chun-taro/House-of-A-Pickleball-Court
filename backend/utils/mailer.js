@@ -231,7 +231,7 @@ export const sendPaymentReceiptEmail = async ({ payment, booking, user }) => {
 
   const code = booking?.booking_code || `BOOK-${booking?.id || ''}`;
   const amount = Number(payment.amount || booking?.total_amount || 0).toFixed(2);
-  const method = (payment.payment_method || 'GCash / Cash').toUpperCase();
+  const method = (payment.payment_method || 'GCash').toUpperCase();
   const refNum = payment.reference_number || 'N/A';
 
   const subject = `Payment Receipt [₱${amount}] - House of A's Pickleball Court`;
