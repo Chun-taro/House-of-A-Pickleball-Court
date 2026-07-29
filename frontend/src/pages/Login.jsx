@@ -6,8 +6,8 @@ import logoImg from '../images/Logo.jpg';
 
 export default function Login() {
   const [email, setEmail] = useState(() => localStorage.getItem('remember_me_email') || '');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('remember_me_email'));
+  const [password, setPassword] = useState(() => localStorage.getItem('remember_me_password') || '');
+  const [rememberMe, setRememberMe] = useState(() => !!(localStorage.getItem('remember_me_email') && localStorage.getItem('remember_me_password')));
   const [otpCode, setOtpCode] = useState('');
   const [requiresOtp, setRequiresOtp] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
@@ -28,8 +28,10 @@ export default function Login() {
     if (res.success) {
       if (rememberMe) {
         localStorage.setItem('remember_me_email', email);
+        localStorage.setItem('remember_me_password', password);
       } else {
         localStorage.removeItem('remember_me_email');
+        localStorage.removeItem('remember_me_password');
       }
       if (res.user.role === 'admin' || res.user.role === 'staff') {
         navigate('/admin/dashboard');
@@ -59,6 +61,13 @@ export default function Login() {
 
     const res = await verifyOTP(unverifiedEmail, otpCode.trim());
     if (res.success) {
+      if (rememberMe) {
+        localStorage.setItem('remember_me_email', email);
+        localStorage.setItem('remember_me_password', password);
+      } else {
+        localStorage.removeItem('remember_me_email');
+        localStorage.removeItem('remember_me_password');
+      }
       if (res.user.role === 'admin' || res.user.role === 'staff') {
         navigate('/admin/dashboard');
       } else {
