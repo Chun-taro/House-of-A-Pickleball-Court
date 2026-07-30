@@ -172,6 +172,15 @@ export const updatePaymentStatus = async (req, res) => {
           receipt_available: true,
         }).catch((err) => console.error('Notification create error:', err));
       }
+    } else if (targetStatus === 'failed' && updatedPayment?.user_id?._id) {
+      Notification.create({
+        user_id: updatedPayment.user_id._id,
+        booking_id: updatedPayment.booking_id?._id,
+        title: '⚠️ Payment Proof Verification Failed',
+        message: `Your payment proof for booking ${updatedPayment.booking_id?.booking_code || ''} could not be verified. Please re-upload a valid GCash transaction screenshot.`,
+        type: 'payment_rejected',
+        receipt_available: false,
+      }).catch((err) => console.error('Notification create error:', err));
     }
 
     return res.json({
@@ -262,6 +271,17 @@ export const uploadProofImage = async (req, res) => {
             facility: booking.facility_id ? booking.facility_id.toObject() : null,
           }).catch((err) => console.error('Payment receipt email error on proof upload:', err));
         }
+
+        // Notify Admin & Staff of payment proof submission
+        Notification.create({
+          user_id: req.user._id,
+          booking_id: booking._id,
+          title: `💳 Payment Proof Submitted: ${booking.booking_code}`,
+          message: `Customer ${req.user.name || 'User'} uploaded GCash payment proof (Ref: ${payment.reference_number || 'N/A'}) for booking ${booking.booking_code}.`,
+          type: 'proof_submitted',
+          for_role: 'admin',
+          receipt_available: true,
+        }).catch((err) => console.error('Admin notification error on proof upload:', err));
       }
     }
 

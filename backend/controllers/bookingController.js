@@ -8,7 +8,7 @@ import OperatingHour from '../models/OperatingHour.js';
 import Holiday from '../models/Holiday.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
-import { sendBookingConfirmationEmail, sendPaymentReceiptEmail } from '../utils/mailer.js';
+import { sendBookingConfirmationEmail, sendPaymentReceiptEmail, sendAdminNewBookingEmail } from '../utils/mailer.js';
 import { generatePdfReceipt } from '../utils/pdfReceiptGenerator.js';
 
 // Helper to convert "HH:MM" string to total minutes from midnight
@@ -304,6 +304,14 @@ export const createBooking = async (req, res) => {
         user: req.user,
       }).catch((err) => console.error('Payment mailer error:', err));
     }
+
+    // Send instant email notification to Admin for new booking
+    await sendAdminNewBookingEmail({
+      booking,
+      user: req.user,
+      courtName: court.name,
+      facilityName: facility.name,
+    }).catch((err) => console.error('Admin booking mailer error:', err));
 
     // Notify Admin & Staff of new customer booking
     await Notification.create({
@@ -653,6 +661,17 @@ export const cancelBooking = async (req, res) => {
       await payment.save();
     }
 
+    // Notify Admin & Staff of customer booking cancellation
+    await Notification.create({
+      user_id: req.user._id,
+      booking_id: booking._id,
+      title: `🚫 Booking Cancelled: ${booking.booking_code}`,
+      message: `Customer ${req.user.name} cancelled reservation ${booking.booking_code} for ${booking.booking_date} (${booking.start_time}-${booking.end_time}). Reason: ${reason || 'N/A'}.`,
+      type: 'booking_cancelled',
+      for_role: 'admin',
+      receipt_available: false,
+    }).catch((err) => console.error('Cancellation notification error:', err));
+
     return res.json({ success: true, message: 'Booking cancelled successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -778,14 +797,22 @@ export const updateBookingStatusAdmin = async (req, res) => {
 
       if (targetBooking.status === 'approved') {
         title = '🎉 Booking Approved & Ready!';
-        message = `Great news! Your booking ${targetBooking.booking_code} has been approved by admin. Your official PDF receipt is good to go and ready to download!`;
+        message = `Great news! Your booking ${targetBooking.booking_code} has been approved by admin. Your official PDF receipt is ready for download!`;
         notifType = 'booking_approved';
-      } else if (targetBooking.status === 'partially_paid') {
-        title = '✅ Initial Deposit Verified!';
-        message = `Your initial deposit for booking ${targetBooking.booking_code} was verified. Your reservation is confirmed and receipt is ready for download!`;
-        notifType = 'payment_verified';
+      } else if (targetBooking.status === 'checked_in') {
+        title = '🎾 Checked In at Court!';
+        message = `You have successfully checked in for booking ${targetBooking.booking_code} on ${targetBooking.booking_date} (${targetBooking.start_time}-${targetBooking.end_time}). Enjoy your game!`;
+        notifType = 'booking_checked_in';
+      } else if (targetBooking.status === 'completed') {
+        title = '🏆 Court Session Completed!';
+        message = `Your court session for booking ${targetBooking.booking_code} has been marked as completed. Thank you for playing at House of A's!`;
+        notifType = 'booking_completed';
+      } else if (targetBooking.status === 'cancelled') {
+        title = '🚫 Booking Cancelled by Admin';
+        message = `Your booking ${targetBooking.booking_code} for ${targetBooking.booking_date} has been cancelled by the venue management.`;
+        notifType = 'booking_cancelled';
       } else if (targetBooking.status === 'rejected') {
-        title = '⚠️ Booking Verification Status';
+        title = '⚠️ Booking Request Not Approved';
         message = `Your booking request ${targetBooking.booking_code} could not be approved by administrator.`;
         notifType = 'booking_rejected';
       }

@@ -2,7 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Bell, CheckCircle2, Clock, X, Download, FileText, CheckCheck, Calendar, CreditCard } from 'lucide-react';
+import {
+  Bell,
+  CheckCircle2,
+  Clock,
+  X,
+  Download,
+  FileText,
+  CheckCheck,
+  Calendar,
+  CreditCard,
+  AlertTriangle,
+  UserCheck,
+  Info,
+  Award,
+  Sparkles,
+} from 'lucide-react';
 import PdfReceiptModal from './PdfReceiptModal';
 
 export default function NotificationDropdown() {
@@ -12,6 +27,7 @@ export default function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [receiptBooking, setReceiptBooking] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
   const dropdownRef = useRef(null);
 
   const isAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
@@ -70,8 +86,10 @@ export default function NotificationDropdown() {
 
     if (isAdminOrStaff) {
       setIsOpen(false);
-      if (notif.type === 'proof_submitted') {
+      if (['proof_submitted', 'payment_verified', 'payment_rejected'].includes(notif.type)) {
         navigate('/admin/payments');
+      } else if (['facility_alert', 'holiday_alert'].includes(notif.type)) {
+        navigate('/admin/schedules');
       } else {
         navigate('/admin/bookings');
       }
@@ -79,6 +97,53 @@ export default function NotificationDropdown() {
       setReceiptBooking(notif.booking_id);
     }
   };
+
+  const renderIcon = (type) => {
+    switch (type) {
+      case 'proof_submitted':
+        return <CreditCard className="w-4 h-4 text-blue-500 shrink-0" />;
+      case 'payment_verified':
+        return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />;
+      case 'payment_rejected':
+        return <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />;
+      case 'new_booking':
+        return <Calendar className="w-4 h-4 text-emerald-500 shrink-0" />;
+      case 'booking_approved':
+        return <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />;
+      case 'booking_checked_in':
+        return <UserCheck className="w-4 h-4 text-blue-500 shrink-0" />;
+      case 'booking_completed':
+        return <Award className="w-4 h-4 text-purple-500 shrink-0" />;
+      case 'booking_cancelled':
+      case 'booking_rejected':
+        return <X className="w-4 h-4 text-rose-500 shrink-0" />;
+      case 'user_account_updated':
+        return <FileText className="w-4 h-4 text-amber-500 shrink-0" />;
+      case 'facility_alert':
+      case 'holiday_alert':
+        return <Clock className="w-4 h-4 text-indigo-500 shrink-0" />;
+      default:
+        return <Info className="w-4 h-4 text-slate-400 shrink-0" />;
+    }
+  };
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (activeTab === 'unread') return !n.is_read;
+    if (activeTab === 'bookings')
+      return [
+        'new_booking',
+        'booking_approved',
+        'booking_cancelled',
+        'booking_checked_in',
+        'booking_completed',
+        'booking_rejected',
+      ].includes(n.type);
+    if (activeTab === 'payments')
+      return ['proof_submitted', 'payment_verified', 'payment_rejected'].includes(n.type);
+    if (activeTab === 'system')
+      return ['user_account_updated', 'facility_alert', 'holiday_alert', 'general'].includes(n.type);
+    return true;
+  });
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
@@ -103,11 +168,11 @@ export default function NotificationDropdown() {
       {isOpen && (
         <div className="fixed sm:absolute top-16 sm:top-full right-3 sm:right-0 left-3 sm:left-auto mt-2 sm:w-96 rounded-2xl bg-white border border-slate-200 shadow-2xl z-50 overflow-hidden text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
-          <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-emerald-600" />
               <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider">
-                {isAdminOrStaff ? 'Admin & Staff Alerts' : 'My Notifications'}
+                {isAdminOrStaff ? 'System Alerts & Activity' : 'Notifications'}
               </h4>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">
@@ -126,20 +191,43 @@ export default function NotificationDropdown() {
             )}
           </div>
 
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 bg-slate-100/70 border-b border-slate-200 text-[11px] font-bold overflow-x-auto scrollbar-none">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'unread', label: `Unread (${unreadCount})` },
+              { id: 'bookings', label: 'Bookings' },
+              { id: 'payments', label: 'Payments' },
+              { id: 'system', label: 'System' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  activeTab === tab.id
+                    ? 'bg-slate-900 text-white font-extrabold shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-200/70'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {/* Notifications List */}
           <div className="max-h-[60vh] sm:max-h-80 overflow-y-auto divide-y divide-slate-100">
-            {notifications.length === 0 ? (
+            {filteredNotifications.length === 0 ? (
               <div className="p-6 text-center text-slate-400 space-y-1">
                 <Bell className="w-6 h-6 mx-auto text-slate-300 mb-1" />
-                <p className="text-xs font-semibold">No notifications yet</p>
+                <p className="text-xs font-semibold">No notifications in this tab</p>
                 <p className="text-[10px]">
                   {isAdminOrStaff
-                    ? 'New customer reservations and payment proofs will appear here.'
-                    : "You'll get notified here when your booking is approved & receipt is ready."}
+                    ? 'Customer reservations, payments, and system updates will appear here.'
+                    : "You'll get notified here when your booking, payment, or schedule status updates."}
                 </p>
               </div>
             ) : (
-              notifications.map((notif) => {
+              filteredNotifications.map((notif) => {
                 const token = localStorage.getItem('sc_token') || localStorage.getItem('token') || '';
                 const bookingCode = notif.booking_id?.booking_code;
                 const bookingId = notif.booking_id?._id || notif.booking_id;
@@ -158,14 +246,8 @@ export default function NotificationDropdown() {
 
                     <div className="pl-2 space-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5">
-                          {notif.type === 'proof_submitted' ? (
-                            <CreditCard className="w-4 h-4 text-blue-600 shrink-0" />
-                          ) : notif.type === 'new_booking' ? (
-                            <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
-                          ) : (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          )}
+                        <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5 leading-snug">
+                          {renderIcon(notif.type)}
                           {notif.title}
                         </span>
                         <span className="text-[9px] font-medium text-slate-400 shrink-0">
@@ -178,7 +260,7 @@ export default function NotificationDropdown() {
                       {/* Quick Action Buttons */}
                       {isAdminOrStaff ? (
                         <div className="pt-1.5 flex items-center gap-2">
-                          {notif.type === 'proof_submitted' ? (
+                          {['proof_submitted', 'payment_verified', 'payment_rejected'].includes(notif.type) ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -187,7 +269,7 @@ export default function NotificationDropdown() {
                               }}
                               className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] rounded-lg inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
                             >
-                              <CreditCard className="w-3 h-3" /> Review Payment Proofs
+                              <CreditCard className="w-3 h-3" /> Review Payments
                             </button>
                           ) : (
                             <button
@@ -198,12 +280,13 @@ export default function NotificationDropdown() {
                               }}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] rounded-lg inline-flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
                             >
-                              <Calendar className="w-3 h-3" /> Manage Reservations
+                              <Calendar className="w-3 h-3" /> Manage Bookings
                             </button>
                           )}
                         </div>
                       ) : (
-                        bookingId && (
+                        bookingId &&
+                        notif.receipt_available && (
                           <div className="pt-1.5 flex items-center gap-2">
                             <a
                               href={`/api/bookings/${bookingId}/receipt?token=${token}`}

@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 
 // Admin: Get all users
 export const getUsers = async (req, res) => {

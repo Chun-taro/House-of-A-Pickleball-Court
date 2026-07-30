@@ -9,11 +9,14 @@ export const getNotifications = async (req, res) => {
       ? {
           $or: [
             { user_id: req.user._id },
-            { for_role: { $in: ['admin', 'staff', 'all_admin'] } },
+            { for_role: { $in: ['admin', 'staff', 'all_admin', 'all_users'] } },
           ],
         }
       : {
-          user_id: req.user._id,
+          $or: [
+            { user_id: req.user._id },
+            { for_role: { $in: ['customer', 'all_users'] } },
+          ],
         };
 
     const notifications = await Notification.find(query)
@@ -50,14 +53,15 @@ export const markNotificationsAsRead = async (req, res) => {
     const isAdminOrStaff = ['admin', 'staff'].includes(req.user.role);
 
     if (id === 'read-all') {
-      if (isAdminOrStaff) {
-        await Notification.updateMany(
-          { for_role: { $in: ['admin', 'staff', 'all_admin'] } },
-          { $addToSet: { read_by: req.user._id }, is_read: true }
-        );
-      } else {
-        await Notification.updateMany({ user_id: req.user._id, is_read: false }, { is_read: true });
-      }
+      await Notification.updateMany(
+        {
+          $or: [
+            { user_id: req.user._id },
+            { for_role: { $in: ['admin', 'staff', 'all_admin', 'all_users', 'customer'] } },
+          ],
+        },
+        { $addToSet: { read_by: req.user._id }, is_read: true }
+      );
       return res.json({ success: true, message: 'All notifications marked as read.' });
     }
 

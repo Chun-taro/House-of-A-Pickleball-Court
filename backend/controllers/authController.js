@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { sendWelcomeEmail, sendVerificationCodeEmail, sendPasswordResetCodeEmail } from '../utils/mailer.js';
 
 const generateToken = (id) => {
@@ -111,6 +112,15 @@ export const verifyOTP = async (req, res) => {
     // Await Welcome Email in serverless environment
     await sendWelcomeEmail({ id: user._id, name: user.name, email: user.email })
       .catch((err) => console.error('Welcome Mailer error:', err));
+
+    // Create welcoming in-app notification
+    await Notification.create({
+      user_id: user._id,
+      title: '🎾 Welcome to House of A\'s Pickleball Court!',
+      message: `Hi ${user.name}! Your email is verified. You can now browse court availability and make online reservations anytime.`,
+      type: 'general',
+      for_role: 'customer',
+    }).catch((err) => console.error('Welcome notification error:', err));
 
     return res.json({
       success: true,
@@ -247,6 +257,15 @@ export const updateProfile = async (req, res) => {
     if (password) user.password = password;
 
     await user.save();
+
+    // Create profile/password update security notification
+    await Notification.create({
+      user_id: user._id,
+      title: '🔐 Account Profile Updated',
+      message: `Your account details ${password ? '(including password)' : ''} were updated successfully. If you did not make this change, please contact support immediately.`,
+      type: 'user_account_updated',
+      for_role: 'customer',
+    }).catch((err) => console.error('Account update notification error:', err));
 
     return res.json({
       success: true,

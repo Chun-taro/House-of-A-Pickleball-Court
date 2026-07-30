@@ -1,6 +1,7 @@
 import Facility from '../models/Facility.js';
 import OperatingHour from '../models/OperatingHour.js';
 import Holiday from '../models/Holiday.js';
+import Notification from '../models/Notification.js';
 
 // Get Operating Hours & Holidays for Admin / Staff
 export const getSchedules = async (req, res) => {
@@ -58,6 +59,14 @@ export const updateOperatingHours = async (req, res) => {
       );
     }
 
+    // Broadcast facility operating hours update alert
+    await Notification.create({
+      title: '⏰ Facility Operating Hours Updated',
+      message: 'Operating hours for House of A\'s court slots have been updated. Please check the schedule for new open hours.',
+      type: 'facility_alert',
+      for_role: 'all_users',
+    }).catch((err) => console.error('Schedule notification error:', err));
+
     return res.json({ success: true, message: 'Operating hours updated successfully.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -79,6 +88,14 @@ export const createHoliday = async (req, res) => {
       holiday_date,
       is_recurring: !!is_recurring,
     });
+
+    // Broadcast holiday closure alert
+    await Notification.create({
+      title: `🏖️ Special Schedule / Holiday Closure: ${name}`,
+      message: `House of A's facility will observe a special schedule / closure on ${holiday_date} due to ${name}.`,
+      type: 'holiday_alert',
+      for_role: 'all_users',
+    }).catch((err) => console.error('Holiday notification error:', err));
 
     const mapped = { ...holiday.toObject(), id: holiday._id, _id: holiday._id };
 

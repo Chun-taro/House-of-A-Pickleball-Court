@@ -315,3 +315,64 @@ export const sendVerificationCodeEmail = async ({ name, email, code }) => {
     html: getEmailWrapper('Email Verification', content),
   });
 };
+
+// 5. Admin Notification Email for New Booking
+export const sendAdminNewBookingEmail = async ({ booking, user, courtName, facilityName }) => {
+  const adminEmail = process.env.GMAIL_USER;
+  if (!adminEmail) return;
+
+  const code = booking.booking_code || `BOOK-${booking._id || booking.id}`;
+  const date = booking.booking_date;
+  const startTime = booking.start_time;
+  const endTime = booking.end_time;
+  const amount = Number(booking.total_amount || 0).toFixed(2);
+  const customerName = user?.name || 'Customer';
+  const customerEmail = user?.email || 'N/A';
+  const customerPhone = user?.phone || 'N/A';
+
+  const subject = `📌 New Booking Alert [${code}] - ${customerName}`;
+  const content = `
+    <h2 style="color: #ffffff; margin-top: 0;">New Reservation Received! 🎾</h2>
+    <p>A new pickleball court reservation has been submitted by <strong>${customerName}</strong>.</p>
+
+    <div style="background: #1e293b; padding: 16px; border-radius: 12px; margin: 20px 0;">
+      <span class="badge" style="background: #1e3a8a; color: #93c5fd;">NEW BOOKING</span>
+      <table class="table-details">
+        <tr>
+          <td style="color: #94a3b8;">Booking Code:</td>
+          <td style="color: #ffffff; font-weight: bold; text-align: right;">${code}</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8;">Customer Name:</td>
+          <td style="color: #ffffff; font-weight: bold; text-align: right;">${customerName}</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8;">Email / Phone:</td>
+          <td style="color: #ffffff; font-weight: bold; text-align: right;">${customerEmail} (${customerPhone})</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8;">Venue / Court:</td>
+          <td style="color: #ffffff; font-weight: bold; text-align: right;">${facilityName || "House of A's"} - ${courtName || "Main Court"}</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8;">Date & Slot:</td>
+          <td style="color: #ffffff; font-weight: bold; text-align: right;">${date} (${startTime} - ${endTime})</td>
+        </tr>
+        <tr>
+          <td style="color: #94a3b8;">Total Amount:</td>
+          <td style="color: #34d399; font-weight: bold; text-align: right;">₱${amount}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/admin/bookings" class="btn">Open Admin Booking Panel</a>
+    </div>
+  `;
+
+  return sendEmail({
+    to: adminEmail,
+    subject,
+    html: getEmailWrapper('New Booking Alert', content),
+  });
+};
