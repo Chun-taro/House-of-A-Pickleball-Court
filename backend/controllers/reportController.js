@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Booking from '../models/Booking.js';
 import Payment from '../models/Payment.js';
 import Facility from '../models/Facility.js';
@@ -139,3 +140,104 @@ export const exportReportCsv = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Get Database Storage Statistics (Admin Only)
+export const getDatabaseStorageStats = async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) {
+      return res.status(500).json({ success: false, message: 'Database connection not initialized' });
+    }
+
+    let stats = {};
+    try {
+      stats = await db.stats();
+    } catch (err) {
+      console.warn('Failed to retrieve db.stats(), attempting command fallback:', err.message);
+      stats = await db.command({ dbStats: 1 });
+    }
+
+    // Default max storage limit in MB (MongoDB Atlas M0 free tier = 512 MB)
+    const maxStorageMB = parseFloat(process.env.MAX_DB_STORAGE_MB) || 512;
+    const maxStorageBytes = maxStorageMB * 1024 * 1024;
+
+    const dataSizeBytes = stats.dataSize || 0;
+    const storageSizeBytes = stats.storageSize || 0;
+    const indexSizeBytes = stats.indexSize || 0;
+    const totalSizeBytes = stats.totalSize || (storageSizeBytes + indexSizeBytes);
+
+    const availableSizeBytes = Math.max(0, maxStorageBytes - totalSizeBytes);
+    const usedPercentage = Math.min(100, (totalSizeBytes / maxStorageBytes) * 100);
+
+    // Fetch collection document counts & collection stats
+    let collectionsList = [];
+    try {
+      collectionsList = await db.listCollections().toArray();
+    } catch (colErr) {
+      console.warn('Error listing collections:', colErr.message);
+    }
+
+    const collections = [];
+    for (const col of collectionsList) {
+      // Ignore system collections
+      if (col.name.startsWith('system.')) continue;
+
+      let count = 0;
+      let colSize = 0;
+      let colStorage = 0;
+      let colIndex = 0;
+
+      try {
+        const colStats = await db.command({ collStats: col.name });
+        count = colStats.count || 0;
+        colSize = colStats.size || 0;
+        colStorage = colStats.storageSize || 0;
+        colIndex = colStats.totalIndexSize || 0;
+      } catch (err) {
+        try {
+          count = await db.collection(col.name).countDocuments();
+        } catch (cntErr) {
+          count = 0;
+        }
+      }
+
+      collections.push({
+        name: col.name,
+        count,
+        sizeBytes: colSize,
+        storageSizeBytes: colStorage,
+        indexSizeBytes: colIndex,
+        totalSizeBytes: colStorage + colIndex || colSize,
+      });
+    }
+
+    collections.sort((a, b) => b.totalSizeBytes - a.totalSizeBytes);
+
+    return res.json({
+      success: true,
+      dbName: db.databaseName || 'house_of_as_db',
+      stats: {
+        maxStorageMB,
+        maxStorageBytes,
+        dataSizeBytes,
+        storageSizeBytes,
+        indexSizeBytes,
+        totalSizeBytes,
+        availableSizeBytes,
+        availableStorageMB: (availableSizeBytes / (1024 * 1024)).toFixed(2),
+        totalUsedMB: (totalSizeBytes / (1024 * 1024)).toFixed(2),
+        dataSizeMB: (dataSizeBytes / (1024 * 1024)).toFixed(2),
+        indexSizeMB: (indexSizeBytes / (1024 * 1024)).toFixed(2),
+        storageSizeMB: (storageSizeBytes / (1024 * 1024)).toFixed(2),
+        usedPercentage: Number(usedPercentage.toFixed(2)),
+        objectsCount: stats.objects || 0,
+        collectionsCount: stats.collections || collections.length,
+      },
+      collections,
+    });
+  } catch (error) {
+    console.error('Error fetching database storage stats:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

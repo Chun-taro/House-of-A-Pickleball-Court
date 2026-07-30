@@ -208,17 +208,17 @@ export const generatePdfReceipt = (data, outputStream) => {
   doc.rect(40, footerY, 515, 55).fill('#fffbeb').stroke('#fde68a');
 
   doc
-    .fillColor('#92400e')
+    .fillColor('#065f46')
     .fontSize(9)
     .font('Helvetica-Bold')
-    .text('IMPORTANT RETENTION & RECORD NOTICE:', 50, footerY + 10);
+    .text('OFFICIAL RECORD NOTICE:', 50, footerY + 10);
 
   doc
-    .fillColor('#78350f')
+    .fillColor('#047857')
     .fontSize(8)
     .font('Helvetica')
     .text(
-      'Uploaded GCash proof of payment screenshots are stored temporarily and automatically purged after 2–3 days to conserve storage space. Please download and keep this official PDF receipt for your permanent records, as uploaded screenshots will no longer be available after the retention period.',
+      'This document serves as your official verified receipt for court reservation at House of A Pickleball Court. Please keep this PDF for your personal records.',
       50,
       footerY + 24,
       { width: 495, align: 'left' }

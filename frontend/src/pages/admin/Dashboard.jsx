@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
+import DatabaseStorageWidget from '../../components/DatabaseStorageWidget';
 import { BookOpen, Clock, CheckCircle2, Banknote, Building2, Users } from 'lucide-react';
 
 export default function Dashboard() {
@@ -8,7 +9,7 @@ export default function Dashboard() {
   const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchDashboard = () => {
     axios.get('/api/reports/dashboard-summary')
       .then((res) => {
         if (res.data.success) {
@@ -18,6 +19,21 @@ export default function Dashboard() {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+
+    const timer = setInterval(fetchDashboard, 5000);
+    const handleRefetch = () => fetchDashboard();
+    window.addEventListener('focus', handleRefetch);
+    window.addEventListener('app:data-updated', handleRefetch);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleRefetch);
+      window.removeEventListener('app:data-updated', handleRefetch);
+    };
   }, []);
 
   if (loading) {
@@ -65,6 +81,10 @@ export default function Dashboard() {
           <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">₱{stats?.totalRevenue?.toFixed(2) || '0.00'}</p>
         </div>
       </div>
+
+      {/* Database Storage Available Card (Strictly Admin View Only) */}
+      <DatabaseStorageWidget />
+
 
       {/* Recent Bookings Table */}
       <div className="glass-card p-4 sm:p-6 rounded-3xl space-y-4">

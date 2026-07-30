@@ -314,7 +314,7 @@ export const serveProofImage = async (req, res) => {
     if (fs.existsSync(tmpPath)) return res.sendFile(tmpPath);
     if (fs.existsSync(cwdPath)) return res.sendFile(cwdPath);
 
-    return res.status(404).json({ success: false, message: 'Proof image file has been purged or retention period expired.' });
+    return res.status(404).json({ success: false, message: 'Proof image file not found on server.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

@@ -12,6 +12,7 @@ import {
   getCalendarEventsAdmin,
   updateBookingStatusAdmin,
   downloadReceiptPdf,
+  deleteBooking,
 } from '../controllers/bookingController.js';
 import { protect, requireRole } from '../middleware/auth.js';
 import { uploadProof } from '../middleware/upload.js';
@@ -36,8 +37,13 @@ router.get('/admin/all', protect, requireRole('admin', 'staff'), getAllBookingsA
 router.get('/admin/calendar-events', protect, requireRole('admin', 'staff'), getCalendarEventsAdmin);
 router.post('/admin/manual-booking', protect, requireRole('admin', 'staff'), createManualBookingAdmin);
 router.patch('/admin/:id/status', protect, requireRole('admin', 'staff'), updateBookingStatusAdmin);
+router.delete('/admin/:id', protect, requireRole('admin', 'staff'), deleteBooking);
+
+// Permanent Delete Booking Route (Admin, Staff, or Owner)
+router.delete('/:id', protect, deleteBooking);
 
 // Single booking view (Customer or Admin)
 router.get('/:id', protect, getBookingById);
 
 export default router;
+

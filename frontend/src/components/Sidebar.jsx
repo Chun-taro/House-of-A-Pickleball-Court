@@ -22,14 +22,16 @@ export default function Sidebar({ isOpen, onClose }) {
     { label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
     { label: 'Bookings', icon: BookOpen, path: '/admin/bookings' },
     { label: 'Calendar View', icon: Calendar, path: '/admin/calendar' },
-    { label: 'Facilities', icon: Building2, path: '/admin/facilities' },
-    { label: 'Courts', icon: Trophy, path: '/admin/courts' },
     { label: 'Schedules', icon: Clock, path: '/admin/schedules' },
     { label: 'Payments', icon: CreditCard, path: '/admin/payments' },
     { label: 'Reports', icon: BarChart3, path: '/admin/reports' },
   ];
 
   if (isAdmin) {
+    navItems.splice(3, 0,
+      { label: 'Facilities', icon: Building2, path: '/admin/facilities' },
+      { label: 'Courts', icon: Trophy, path: '/admin/courts' }
+    );
     navItems.push({ label: 'Users', icon: Users, path: '/admin/users' });
   }
 
@@ -38,14 +40,14 @@ export default function Sidebar({ isOpen, onClose }) {
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs lg:hidden transition-opacity"
+          className="fixed inset-x-0 top-16 sm:top-20 bottom-0 z-40 bg-slate-950/70 backdrop-blur-xs lg:hidden transition-opacity"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:static top-0 bottom-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 text-slate-300 min-h-screen lg:min-h-[calc(100vh-5rem)] p-4 flex flex-col justify-between shadow-xl lg:shadow-none transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:sticky top-16 sm:top-20 bottom-0 left-0 z-45 lg:z-30 w-64 bg-slate-900 border-r border-slate-800 text-slate-300 h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] lg:self-start p-4 flex flex-col justify-between shadow-xl lg:shadow-none overflow-y-auto transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

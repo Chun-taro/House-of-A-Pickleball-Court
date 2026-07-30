@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, LogIn, AlertCircle, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Mail, Lock, LogIn, AlertCircle, ShieldCheck, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import logoImg from '../images/Logo.jpg';
 
 export default function Login() {
   const [email, setEmail] = useState(() => localStorage.getItem('remember_me_email') || '');
   const [password, setPassword] = useState(() => localStorage.getItem('remember_me_password') || '');
   const [rememberMe, setRememberMe] = useState(() => !!(localStorage.getItem('remember_me_email') && localStorage.getItem('remember_me_password')));
+  const [showPassword, setShowPassword] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [requiresOtp, setRequiresOtp] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
@@ -163,13 +164,21 @@ export default function Login() {
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 slate-input rounded-xl text-sm"
+                  className="w-full pl-10 pr-10 py-2.5 slate-input rounded-xl text-sm"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4 text-emerald-600" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 

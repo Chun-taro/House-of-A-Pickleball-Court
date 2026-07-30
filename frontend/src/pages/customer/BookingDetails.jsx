@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import PdfReceiptModal from '../../components/PdfReceiptModal';
-import { Calendar, Clock, Trophy, MapPin, CreditCard, ArrowLeft, XCircle, Download, Info, FileText } from 'lucide-react';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
+import { Calendar, Clock, Trophy, MapPin, CreditCard, ArrowLeft, XCircle, Download, Info, FileText, Trash2 } from 'lucide-react';
 
 export default function BookingDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
   const [booking, setBooking] = useState(null);
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +54,44 @@ export default function BookingDetails() {
 
   useEffect(() => {
     fetchDetails();
+
+    const timer = setInterval(fetchDetails, 5000);
+    const handleRefetch = () => fetchDetails();
+    window.addEventListener('focus', handleRefetch);
+    window.addEventListener('app:data-updated', handleRefetch);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleRefetch);
+      window.removeEventListener('app:data-updated', handleRefetch);
+    };
   }, [id]);
+
+  const handleDeletePermanentBooking = async () => {
+    const isConfirmed = await confirm({
+      title: 'Delete Booking Record?',
+      message: `Are you sure you want to permanently delete reservation "${booking?.booking_code || id}"? This will remove the booking and all related payment records from the database.`,
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const res = await axios.delete(`/api/bookings/${id}`);
+      if (res.data.success) {
+        toast.success(res.data.message || `Booking deleted permanently from database.`);
+        window.dispatchEvent(new Event('app:data-updated'));
+        navigate(-1);
+      } else {
+        toast.error(res.data.message || 'Failed to delete booking.');
+      }
+    } catch (err) {
+      console.error('Delete booking error:', err);
+      toast.error(err.response?.data?.message || 'Error deleting booking from database.');
+    }
+  };
 
   const handleBalanceFileChange = (e) => {
     const file = e.target.files[0];
@@ -72,6 +114,7 @@ export default function BookingDetails() {
       if (res.data.success) {
         setShowCancelModal(false);
         fetchDetails();
+        window.dispatchEvent(new Event('app:data-updated'));
       } else {
         setError(res.data.message);
       }
@@ -216,7 +259,7 @@ export default function BookingDetails() {
 
           <div className="space-y-1">
             <span className="text-xs text-slate-500 font-medium">Payment Option</span>
-            <p className="font-extrabold text-slate-800 text-base">{booking.payment_type === 'partial' ? 'Partial Payment (Deposit)' : 'Full Payment'}</p>
+            <p className="font-extrabold text-slate-800 text-base">Full Payment</p>
             <p className="text-xs text-slate-700 flex items-center gap-1 font-medium">
               <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Method: {payment?.payment_method?.toUpperCase() || 'CASH'}
             </p>
@@ -226,96 +269,6 @@ export default function BookingDetails() {
         {booking.notes && (
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700">
             <strong className="text-slate-900">Notes:</strong> {booking.notes}
-          </div>
-        )}
-
-        {/* Notice when 1st Deposit is Pending Admin Approval */}
-        {booking.status === 'pending' && booking.payment_type === 'partial' && (
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 space-y-2 text-xs text-amber-950">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-700 shrink-0" />
-              <strong className="font-extrabold text-amber-900 text-sm">1st Deposit Proof Pending Admin Approval</strong>
-            </div>
-            <p className="text-[11px] text-amber-800 leading-relaxed pl-6">
-              Your initial deposit payment screenshot has been uploaded and is currently being verified by the admin. Once verified and approved by the admin, your court reservation will be marked as <strong>Partially Paid</strong> and booked, and you will be able to submit your 2nd payment for the remaining balance.
-            </p>
-          </div>
-        )}
-
-        {/* Second / Remaining Balance GCash Payment Submission Form (Available once Partially Paid / Approved) */}
-        {remainingBalance > 0 && booking.status === 'partially_paid' && (
-          <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-4 text-xs">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <div>
-                <h3 className="font-black text-amber-950 text-sm">Pay Remaining Balance (₱{remainingBalance.toFixed(2)})</h3>
-                <p className="text-amber-800 text-[11px]">Submit your second GCash payment and upload the new screenshot proof below.</p>
-              </div>
-              <span className="px-2.5 py-1 bg-amber-200 text-amber-950 font-black rounded-lg text-[10px] uppercase">
-                Action Required
-              </span>
-            </div>
-
-            {balanceMsg && (
-              <div className={`p-3 rounded-xl font-bold text-xs ${balanceMsg.type === 'success' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'}`}>
-                {balanceMsg.text}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitBalancePayment} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-800">Payment Option</label>
-                  <div className="w-full px-3 py-2 bg-amber-100 border border-amber-300 rounded-xl text-xs font-extrabold text-amber-950">
-                    GCash Transfer (Upload Proof)
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-800">Amount Paying Now (₱)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={remainingBalance}
-                    step="0.01"
-                    value={balancePayAmount}
-                    onChange={(e) => setBalancePayAmount(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-900"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-800">GCash Ref No. (Optional)</label>
-                  <input
-                    type="text"
-                    value={balanceRefNum}
-                    onChange={(e) => setBalanceRefNum(e.target.value)}
-                    placeholder="e.g. 1002 9983 4451"
-                    className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-800 block">Upload Screenshot Proof of Second Payment *</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/jpg"
-                  onChange={handleBalanceFileChange}
-                  required
-                  className="w-full p-2 bg-white border border-amber-300 rounded-xl text-xs"
-                />
-                {balanceProofPreview && (
-                  <img src={balanceProofPreview} alt="Second Payment Proof Preview" className="w-20 h-20 object-cover rounded-xl border mt-2" />
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={submittingBalance}
-                className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs shadow-md transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {submittingBalance ? 'Submitting Second Payment...' : `Submit Second Payment (₱${parseFloat(balancePayAmount || 0).toFixed(2)})`}
-              </button>
-            </form>
           </div>
         )}
 
@@ -364,7 +317,7 @@ export default function BookingDetails() {
           </div>
         )}
 
-        {/* Action Buttons: PDF Receipt Download & Cancellation */}
+        {/* Action Buttons: PDF Receipt Download, Cancellation & Permanent Deletion */}
         <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => setReceiptOpen(true)}
@@ -373,14 +326,24 @@ export default function BookingDetails() {
             <Download className="w-4 h-4" /> View & Download PDF Receipt
           </button>
 
-          {['pending', 'partially_paid', 'approved'].includes(booking.status) && (
+          <div className="flex items-center gap-2">
+            {['pending', 'partially_paid', 'approved'].includes(booking.status) && (
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <XCircle className="w-4 h-4" /> Cancel Booking
+              </button>
+            )}
+
             <button
-              onClick={() => setShowCancelModal(true)}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              onClick={handleDeletePermanentBooking}
+              className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Permanently Delete Booking Record from Database"
             >
-              <XCircle className="w-4 h-4" /> Cancel Booking
+              <Trash2 className="w-4 h-4" /> Delete Record
             </button>
-          )}
+          </div>
         </div>
       </div>
 

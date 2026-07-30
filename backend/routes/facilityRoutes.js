@@ -20,8 +20,8 @@ router.get('/', getFacilities);
 router.get('/:id', getFacilityById);
 router.get('/:facilityId/courts', getCourtsByFacility);
 
-// Admin / Staff view all
-router.get('/admin/all', protect, requireRole('admin', 'staff'), getAllFacilitiesAdmin);
+// Admin view all
+router.get('/admin/all', protect, requireRole('admin'), getAllFacilitiesAdmin);
 
 // Admin Mutation routes
 router.post('/', protect, requireRole('admin'), createFacility);

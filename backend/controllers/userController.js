@@ -85,16 +85,24 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    if (name) user.name = name;
-    if (email) user.email = email.toLowerCase();
-    if (phone !== undefined) user.phone = phone;
-    if (role) user.role = role;
-    if (password) user.password = password;
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email.toLowerCase();
+    if (phone !== undefined) updateData.phone = phone;
+    if (role) updateData.role = role;
 
-    await user.save();
+    if (password) {
+      user.password = password;
+      await user.save();
+    }
 
-    const mapped = { ...user.toObject(), id: user._id, _id: user._id };
-    delete mapped.password;
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    const mapped = { ...updatedUser.toObject(), id: updatedUser._id, _id: updatedUser._id };
 
     return res.json({ success: true, message: 'User updated successfully', user: mapped });
   } catch (error) {

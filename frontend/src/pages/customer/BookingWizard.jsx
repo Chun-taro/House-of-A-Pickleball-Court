@@ -164,6 +164,7 @@ export default function BookingWizard() {
       });
 
       if (res.data.success) {
+        window.dispatchEvent(new Event('app:data-updated'));
         navigate(`/my-bookings/${res.data.booking._id}`);
       } else {
         setMessage({ type: 'error', text: res.data.message });

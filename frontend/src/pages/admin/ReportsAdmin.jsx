@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
+import DatabaseStorageWidget from '../../components/DatabaseStorageWidget';
 import {
   Download,
   Banknote,
@@ -24,13 +25,28 @@ export default function ReportsAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => {
+  const fetchReports = () => {
     axios.get('/api/reports/full')
       .then((res) => {
         if (res.data.success) setData(res.data);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchReports();
+
+    const timer = setInterval(fetchReports, 5000);
+    const handleRefetch = () => fetchReports();
+    window.addEventListener('focus', handleRefetch);
+    window.addEventListener('app:data-updated', handleRefetch);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleRefetch);
+      window.removeEventListener('app:data-updated', handleRefetch);
+    };
   }, []);
 
   const handleExportCsv = () => {
@@ -56,7 +72,8 @@ export default function ReportsAdmin() {
   const approvedCount = statusCounts.approved || 0;
   const pendingCount = statusCounts.pending || 0;
   const completedCount = statusCounts.completed || 0;
-  const cancelledCount = (statusCounts.cancelled || 0) + (statusCounts.rejected || 0);
+  const cancelledCount = statusCounts.cancelled || 0;
+  const rejectedCount = statusCounts.rejected || 0;
 
   // Filter bookings list
   const filteredBookings = bookings.filter((b) => {
@@ -190,11 +207,11 @@ export default function ReportsAdmin() {
           </div>
         </div>
 
-        {/* Cancelled / Rejected */}
+        {/* Cancelled Sessions */}
         <div className="glass-card p-6 rounded-3xl space-y-4 border border-rose-200 shadow-xl hover:shadow-2xl transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-rose-800 bg-rose-100 px-3 py-1 rounded-lg border border-rose-300">
-              Cancelled / Rejected
+              Cancelled Sessions
             </span>
             <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md">
               <XCircle className="w-5 h-5" />
@@ -204,10 +221,31 @@ export default function ReportsAdmin() {
             <p className="text-3xl sm:text-4xl font-black text-rose-600 font-mono tracking-tight">
               {cancelledCount}
             </p>
-            <p className="text-xs text-slate-500 font-semibold mt-1">Cancelled by user or staff rejected</p>
+            <p className="text-xs text-slate-500 font-semibold mt-1">Cancelled by user</p>
+          </div>
+        </div>
+
+        {/* Rejected Bookings */}
+        <div className="glass-card p-6 rounded-3xl space-y-4 border border-pink-200 shadow-xl hover:shadow-2xl transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-pink-800 bg-pink-100 px-3 py-1 rounded-lg border border-pink-300">
+              Rejected Bookings
+            </span>
+            <div className="w-10 h-10 rounded-2xl bg-pink-600 text-white flex items-center justify-center shadow-md">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl sm:text-4xl font-black text-pink-700 font-mono tracking-tight">
+              {rejectedCount}
+            </p>
+            <p className="text-xs text-slate-500 font-semibold mt-1">Rejected by staff or admin</p>
           </div>
         </div>
       </div>
+
+      {/* Database Storage Metrics (Strictly Admin View Only) */}
+      <DatabaseStorageWidget />
 
       {/* Visual Status Distribution Bar */}
       <div className="glass-card p-6 rounded-3xl space-y-4 shadow-xl border border-slate-200">
@@ -224,6 +262,7 @@ export default function ReportsAdmin() {
           <div style={{ width: `${getPct(pendingCount)}%` }} className="bg-amber-400 transition-all duration-500" title={`Pending: ${getPct(pendingCount)}%`}></div>
           <div style={{ width: `${getPct(completedCount)}%` }} className="bg-blue-500 transition-all duration-500" title={`Completed: ${getPct(completedCount)}%`}></div>
           <div style={{ width: `${getPct(cancelledCount)}%` }} className="bg-rose-500 transition-all duration-500" title={`Cancelled: ${getPct(cancelledCount)}%`}></div>
+          <div style={{ width: `${getPct(rejectedCount)}%` }} className="bg-pink-600 transition-all duration-500" title={`Rejected: ${getPct(rejectedCount)}%`}></div>
         </div>
 
         {/* Legend */}
@@ -243,6 +282,10 @@ export default function ReportsAdmin() {
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
             <span>Cancelled ({getPct(cancelledCount)}%)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-pink-600 inline-block"></span>
+            <span>Rejected ({getPct(rejectedCount)}%)</span>
           </div>
         </div>
       </div>

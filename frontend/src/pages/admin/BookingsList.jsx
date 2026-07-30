@@ -3,9 +3,13 @@ import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import ManualBookingModal from '../../components/ManualBookingModal';
 import PdfReceiptModal from '../../components/PdfReceiptModal';
-import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock, ShieldAlert, Banknote, Smartphone } from 'lucide-react';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
+import { Filter, Check, X, LogIn, Plus, CalendarCheck, User, Download, Eye, FileImage, Clock, ShieldAlert, Banknote, Smartphone, Trash2 } from 'lucide-react';
 
 export default function BookingsList() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,8 +35,48 @@ export default function BookingsList() {
       .finally(() => setLoading(false));
   };
 
+  const handleDeleteBooking = async (bookingId, bookingCode) => {
+    const isConfirmed = await confirm({
+      title: 'Delete Booking Record?',
+      message: `Are you sure you want to permanently delete reservation "${bookingCode}"? This will remove the booking and all related payment records from the database.`,
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const res = await axios.delete(`/api/bookings/${bookingId}`);
+      if (res.data.success) {
+        toast.success(res.data.message || `Booking ${bookingCode} deleted permanently.`);
+        fetchBookings();
+        window.dispatchEvent(new Event('app:data-updated'));
+      } else {
+        toast.error(res.data.message || 'Failed to delete booking.');
+      }
+    } catch (err) {
+      console.error('Delete booking error:', err);
+      toast.error(err.response?.data?.message || 'Error deleting booking from database.');
+    }
+  };
+
   useEffect(() => {
     fetchBookings();
+
+    // Auto-refresh callback polling interval (every 5 seconds)
+    const interval = setInterval(fetchBookings, 5000);
+
+    // Auto-refresh when tab gains focus or global data event fires
+    const handleAutoRefresh = () => fetchBookings();
+    window.addEventListener('focus', handleAutoRefresh);
+    window.addEventListener('app:data-updated', handleAutoRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleAutoRefresh);
+      window.removeEventListener('app:data-updated', handleAutoRefresh);
+    };
   }, [statusFilter]);
 
   const handleUpdateStatus = (id, newStatus) => {
@@ -44,6 +88,7 @@ export default function BookingsList() {
           setAlertMessage(`Booking status updated to [${finalStatus.toUpperCase()}]`);
           setTimeout(() => setAlertMessage(''), 4000);
           fetchBookings();
+          window.dispatchEvent(new Event('app:data-updated'));
         }
       })
       .catch((err) => {
@@ -55,6 +100,7 @@ export default function BookingsList() {
   const handleManualSuccess = (msg) => {
     setAlertMessage(msg || 'Schedule occupied successfully!');
     fetchBookings();
+    window.dispatchEvent(new Event('app:data-updated'));
     setTimeout(() => setAlertMessage(''), 5000);
   };
 
@@ -85,7 +131,6 @@ export default function BookingsList() {
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
-              <option value="partially_paid">Partially Paid</option>
               <option value="approved">Approved</option>
               <option value="checked_in">Checked In</option>
               <option value="completed">Completed</option>
@@ -94,6 +139,35 @@ export default function BookingsList() {
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Quick Status Filter Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {[
+          { id: '', label: 'All Statuses' },
+          { id: 'pending', label: 'Pending' },
+          { id: 'approved', label: 'Approved' },
+          { id: 'checked_in', label: 'Checked In' },
+          { id: 'completed', label: 'Completed' },
+          { id: 'cancelled', label: 'Cancelled' },
+          { id: 'rejected', label: 'Rejected' },
+        ].map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setStatusFilter(f.id)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
+              statusFilter === f.id
+                ? f.id === 'rejected'
+                  ? 'bg-pink-700 text-white shadow-md'
+                  : 'bg-slate-900 text-white shadow-md'
+                : f.id === 'rejected'
+                ? 'bg-pink-50 text-pink-800 border border-pink-200 hover:bg-pink-100'
+                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {alertMessage && (
@@ -205,14 +279,22 @@ export default function BookingsList() {
                           <Download className="w-3.5 h-3.5" />
                         </button>
 
+                        <button
+                          onClick={() => handleDeleteBooking(b._id, b.booking_code)}
+                          className="p-1.5 bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 rounded-lg text-[10px] font-bold transition-colors border border-rose-200"
+                          title="Permanently Delete Booking Record from Database"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
                         {b.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleUpdateStatus(b._id, b.payment_type === 'partial' ? 'partially_paid' : 'approved')}
+                              onClick={() => handleUpdateStatus(b._id, 'approved')}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1"
-                              title={b.payment_type === 'partial' ? 'Approve 1st Deposit & Mark Partially Paid' : 'Approve Full Booking'}
+                              title="Approve Booking"
                             >
-                              <Check className="w-3 h-3" /> {b.payment_type === 'partial' ? 'Approve Deposit' : 'Approve'}
+                              <Check className="w-3 h-3" /> Approve
                             </button>
                             <button
                               onClick={() => handleUpdateStatus(b._id, 'rejected')}
@@ -220,26 +302,6 @@ export default function BookingsList() {
                               title="Reject"
                             >
                               <X className="w-3 h-3" /> Reject
-                            </button>
-                          </>
-                        )}
-                        {b.status === 'partially_paid' && (
-                          <>
-                            {b.payments && b.payments.length > 1 ? (
-                              <button
-                                onClick={() => handleUpdateStatus(b._id, 'approved')}
-                                className="px-2.5 py-1 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1 shadow-xs"
-                                title="Verify 2nd Payment & Mark Fully Approved"
-                              >
-                                <Check className="w-3 h-3" /> Verify 2nd Pay
-                              </button>
-                            ) : null}
-                            <button
-                              onClick={() => handleUpdateStatus(b._id, 'checked_in')}
-                              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[10px] flex items-center gap-1"
-                              title="Check in customer & collect remaining cash balance"
-                            >
-                              <LogIn className="w-3 h-3" /> Check In
                             </button>
                           </>
                         )}
@@ -363,33 +425,16 @@ export default function BookingsList() {
                 )}
               </div>
 
-              {/* Retention Notice */}
-              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2 font-medium">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Uploaded screenshot will be automatically purged after 2–3 days.</span>
-              </div>
-
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 {selectedProof.status === 'pending' && (
-                  <button
-                    onClick={() => {
-                      handleUpdateStatus(selectedProof._id, selectedProof.payment_type === 'partial' ? 'partially_paid' : 'approved');
-                      setSelectedProof(null);
-                    }}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
-                  >
-                    <Check className="w-4 h-4" /> {selectedProof.payment_type === 'partial' ? 'Approve 1st Deposit & Book Slot' : 'Approve Booking'}
-                  </button>
-                )}
-                {selectedProof.status === 'partially_paid' && selectedProof.payments?.length > 1 && (
                   <button
                     onClick={() => {
                       handleUpdateStatus(selectedProof._id, 'approved');
                       setSelectedProof(null);
                     }}
-                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
-                    <Check className="w-4 h-4" /> Verify 2nd Balance Payment
+                    <Check className="w-4 h-4" /> Approve Booking
                   </button>
                 )}
                 <button

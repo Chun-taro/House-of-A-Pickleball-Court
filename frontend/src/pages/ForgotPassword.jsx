@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Mail, KeyRound, Lock, ArrowRight, ShieldCheck, CheckCircle2, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Mail, KeyRound, Lock, ArrowRight, ShieldCheck, CheckCircle2, ArrowLeft, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import logoImg from '../images/Logo.jpg';
 
 export default function ForgotPassword() {
@@ -13,6 +13,8 @@ export default function ForgotPassword() {
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -264,30 +266,50 @@ export default function ForgotPassword() {
                 <label className="font-bold text-slate-800 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-emerald-600" /> New Password
                 </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min. 6 characters)"
-                  className="w-full px-4 py-3 slate-input text-xs font-semibold text-slate-900"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min. 6 characters)"
+                    className="w-full pl-4 pr-10 py-3 slate-input text-xs font-semibold text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                    title={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4 text-emerald-600" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="font-bold text-slate-800 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-emerald-600" /> Confirm New Password
                 </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  className="w-full px-4 py-3 slate-input text-xs font-semibold text-slate-900"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full pl-4 pr-10 py-3 slate-input text-xs font-semibold text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4 text-emerald-600" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <button

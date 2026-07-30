@@ -61,11 +61,23 @@ export default function CalendarView() {
 
   useEffect(() => {
     fetchEvents();
+
+    const timer = setInterval(fetchEvents, 5000);
+    const handleRefetch = () => fetchEvents();
+    window.addEventListener('focus', handleRefetch);
+    window.addEventListener('app:data-updated', handleRefetch);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleRefetch);
+      window.removeEventListener('app:data-updated', handleRefetch);
+    };
   }, []);
 
   const handleManualSuccess = (msg) => {
     setAlertMessage(msg || 'Schedule occupied successfully!');
     fetchEvents();
+    window.dispatchEvent(new Event('app:data-updated'));
     setTimeout(() => setAlertMessage(''), 5000);
   };
 
@@ -193,7 +205,7 @@ export default function CalendarView() {
                 <div className="flex items-center gap-2 text-slate-700 font-medium">
                   <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
-                    <strong>Payment:</strong> ₱{selectedEvent.total_amount?.toFixed(2)} ({selectedEvent.payment_type === 'partial' ? 'Partial Deposit' : 'Full Payment'})
+                    <strong>Payment Amount:</strong> ₱{selectedEvent.total_amount?.toFixed(2)}
                   </span>
                 </div>
               )}

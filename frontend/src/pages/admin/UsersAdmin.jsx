@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Plus, Trash2, Shield, UserCheck, AlertCircle } from 'lucide-react';
+import { Users, Plus, Trash2, Shield, UserCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -11,6 +11,7 @@ export default function UsersAdmin() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -53,18 +54,24 @@ export default function UsersAdmin() {
   };
 
   const handleRoleChange = (id, newRole) => {
+    // Optimistically update UI
+    setUsers((prevUsers) =>
+      prevUsers.map((u) => (u._id === id || u.id === id ? { ...u, role: newRole } : u))
+    );
+
     axios.put(`/api/users/${id}`, { role: newRole })
       .then((res) => {
         if (res.data.success) {
-          fetchUsers();
           toast.success('Role updated successfully.');
+          fetchUsers();
         } else {
           toast.warning(res.data.message || 'Action blocked.');
           fetchUsers();
         }
       })
       .catch((err) => {
-        toast.error(err.response?.data?.message || 'Failed to update role.');
+        const errMsg = err.response?.data?.message || 'Failed to update role.';
+        toast.error(errMsg);
         fetchUsers();
       });
   };
@@ -191,13 +198,23 @@ export default function UsersAdmin() {
 
               <div>
                 <label className="font-bold text-slate-700">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 mt-1"
-                />
+                <div className="relative mt-1">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-3 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition-colors p-0.5 cursor-pointer"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4 text-emerald-600" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>

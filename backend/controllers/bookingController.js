@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import Booking from '../models/Booking.js';
 import Payment from '../models/Payment.js';
 import Facility from '../models/Facility.js';
@@ -736,7 +738,7 @@ export const getCalendarEventsAdmin = async (req, res) => {
 export const updateBookingStatusAdmin = async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatuses = ['partially_paid', 'approved', 'rejected', 'checked_in', 'completed', 'cancelled'];
+    const allowedStatuses = ['approved', 'rejected', 'checked_in', 'completed', 'cancelled'];
 
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
@@ -747,24 +749,7 @@ export const updateBookingStatusAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (status === 'partially_paid') {
-      const payments = await Payment.find({ booking_id: targetBooking._id }).sort({ createdAt: 1 });
-      if (payments.length > 0) {
-        payments[0].payment_status = 'paid';
-        payments[0].verification_status = 'verified';
-        payments[0].proof_status = 'verified';
-        payments[0].paid_at = payments[0].paid_at || new Date();
-        await payments[0].save();
-      }
-
-      const allPayments = await Payment.find({ booking_id: targetBooking._id });
-      const totalVerifiedPaid = allPayments
-        .filter((p) => p.verification_status === 'verified' || p.payment_status === 'paid')
-        .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-      targetBooking.paid_amount = totalVerifiedPaid;
-      targetBooking.status = 'partially_paid';
-    } else if (status === 'approved' || status === 'checked_in') {
+    if (status === 'approved' || status === 'checked_in') {
       const payments = await Payment.find({ booking_id: targetBooking._id });
       for (const p of payments) {
         p.payment_status = 'paid';
@@ -888,3 +873,56 @@ export const downloadReceiptPdf = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Delete Booking Permanently from Database
+export const deleteBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking record not found.' });
+    }
+
+    // Authorization check: Admin, Staff, or owner of the booking
+    const isOwner = booking.user_id && booking.user_id.toString() === req.user._id.toString();
+    const isAdminStaff = ['admin', 'staff'].includes(req.user.role);
+
+    if (!isOwner && !isAdminStaff) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this booking.' });
+    }
+
+    // Clean up associated proof files from filesystem
+    const payments = await Payment.find({ booking_id: id });
+    for (const p of payments) {
+      if (p.proof_filename) {
+        const filePath = path.join(process.cwd(), 'uploads', p.proof_filename);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (e) {
+            console.error('Failed to delete proof file during booking deletion:', e.message);
+          }
+        }
+      }
+    }
+
+    // Delete associated payments
+    await Payment.deleteMany({ booking_id: id });
+
+    // Delete associated notifications
+    await Notification.deleteMany({ booking_id: id });
+
+    // Permanently delete booking document from database
+    await Booking.findByIdAndDelete(id);
+
+    return res.json({
+      success: true,
+      message: `Booking ${booking.booking_code} and all related records have been permanently deleted from the database.`,
+    });
+  } catch (error) {
+    console.error('Delete Booking Error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

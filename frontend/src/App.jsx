@@ -48,7 +48,7 @@ const AdminLayout = () => {
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] relative">
       {/* Mobile Management Portal Header Toggle */}
-      <div className="lg:hidden bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
+      <div className="lg:hidden bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm sticky top-16 sm:top-20 z-30">
         <div className="flex items-center space-x-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
           <span className="text-xs font-black text-white uppercase tracking-wider">Management Portal</span>
@@ -115,14 +115,14 @@ export default function App() {
                 <Route path="/admin/dashboard" element={<Dashboard />} />
                 <Route path="/admin/bookings" element={<BookingsList />} />
                 <Route path="/admin/calendar" element={<CalendarView />} />
-                <Route path="/admin/facilities" element={<FacilitiesAdmin />} />
-                <Route path="/admin/courts" element={<CourtsAdmin />} />
                 <Route path="/admin/schedules" element={<SchedulesAdmin />} />
                 <Route path="/admin/payments" element={<PaymentsAdmin />} />
                 <Route path="/admin/reports" element={<ReportsAdmin />} />
 
-                {/* Admin Only */}
+                {/* Admin Only Routes */}
                 <Route element={<ProtectedRoute roles={['admin']} />}>
+                  <Route path="/admin/facilities" element={<FacilitiesAdmin />} />
+                  <Route path="/admin/courts" element={<CourtsAdmin />} />
                   <Route path="/admin/users" element={<UsersAdmin />} />
                 </Route>
               </Route>

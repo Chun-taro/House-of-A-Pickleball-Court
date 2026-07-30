@@ -249,7 +249,7 @@ export default function PaymentsAdmin() {
                   <div className="py-8 text-center text-slate-400 space-y-2">
                     <ShieldAlert className="w-8 h-8 mx-auto text-amber-500/90 mb-1" />
                     <p className="font-semibold text-xs text-slate-200">Proof Screenshot Unavailable</p>
-                    <p className="text-[10px] text-slate-400 max-w-xs mx-auto">This image file has either expired (purged after 72 hours) or is unavailable.</p>
+                    <p className="text-[10px] text-slate-400 max-w-xs mx-auto">This image file is unavailable on the server.</p>
                   </div>
                 ) : (
                   <img
@@ -259,12 +259,6 @@ export default function PaymentsAdmin() {
                     className="max-h-[45vh] w-auto object-contain rounded-xl"
                   />
                 )}
-              </div>
-
-              {/* Retention Notice */}
-              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2 font-medium">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Uploaded screenshots are stored temporarily and purged after 2–3 days.</span>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

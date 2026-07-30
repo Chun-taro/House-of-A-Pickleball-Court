@@ -3,15 +3,19 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import StatusBadge from '../../components/StatusBadge';
 import PdfReceiptModal from '../../components/PdfReceiptModal';
-import { Calendar, Clock, Trophy, MapPin, ArrowRight, Download } from 'lucide-react';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
+import { Calendar, Clock, Trophy, MapPin, ArrowRight, Download, Trash2 } from 'lucide-react';
 
 export default function MyBookings() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [receiptBooking, setReceiptBooking] = useState(null);
 
-  useEffect(() => {
+  const fetchMyBookings = () => {
     axios.get('/api/bookings/my-bookings')
       .then((res) => {
         if (res.data.success) {
@@ -25,7 +29,48 @@ export default function MyBookings() {
         }
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMyBookings();
+
+    const timer = setInterval(fetchMyBookings, 5000);
+    const handleRefetch = () => fetchMyBookings();
+    window.addEventListener('focus', handleRefetch);
+    window.addEventListener('app:data-updated', handleRefetch);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleRefetch);
+      window.removeEventListener('app:data-updated', handleRefetch);
+    };
   }, []);
+
+  const handleDeleteBooking = async (bookingId, bookingCode) => {
+    const isConfirmed = await confirm({
+      title: 'Delete Booking Record?',
+      message: `Are you sure you want to permanently delete reservation "${bookingCode}"? This will remove the booking and all related payment records from the database.`,
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+      type: 'danger',
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      const res = await axios.delete(`/api/bookings/${bookingId}`);
+      if (res.data.success) {
+        toast.success(res.data.message || `Booking ${bookingCode} deleted permanently.`);
+        fetchMyBookings();
+        window.dispatchEvent(new Event('app:data-updated'));
+      } else {
+        toast.error(res.data.message || 'Failed to delete booking.');
+      }
+    } catch (err) {
+      console.error('Delete booking error:', err);
+      toast.error(err.response?.data?.message || 'Error deleting booking from database.');
+    }
+  };
 
   return (
     <>
@@ -124,6 +169,14 @@ export default function MyBookings() {
                 >
                   Details <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
+
+                <button
+                  onClick={() => handleDeleteBooking(b._id, b.booking_code)}
+                  className="p-2 rounded-xl text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors flex items-center justify-center cursor-pointer"
+                  title="Permanently Delete Booking Record from Database"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}

@@ -22,8 +22,7 @@ if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5000;
   connectDB()
     .then(() => {
-      // Initialize automatic GCash proof cleanup scheduler (2-3 day retention)
-      startCleanupScheduler();
+      // Proof cleanup scheduler disabled per admin requirement (permanent image retention)
       app.listen(PORT, () => {
         console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
       });
