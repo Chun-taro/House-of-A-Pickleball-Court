@@ -29,6 +29,11 @@ const stripHtml = (htmlStr) => {
 // Generic Send Email Function with Error Safety & Anti-Spam Headers
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
+    if (!to || to.includes('walkin_') || to.toLowerCase().endsWith('@houseofas.com')) {
+      console.log(`[Google Mailer Notice] Suppressed email to walk-in address: ${to}`);
+      return { success: false, skipped: true, message: 'Walk-in dummy email address skipped' };
+    }
+
     const transporter = getTransporter();
 
     if (!transporter) {
@@ -134,9 +139,23 @@ const getEmailWrapper = (title, contentHtml) => `
 </html>
 `;
 
+// Helper to identify walk-in dummy emails or manual reservations
+const isWalkinEmailOrBooking = (email = '', booking = {}) => {
+  const e = (email || '').toLowerCase();
+  const code = (booking?.booking_code || '').toUpperCase();
+  const notes = (booking?.notes || '').toLowerCase();
+  return (
+    e.includes('walkin_') ||
+    e.endsWith('@houseofas.com') ||
+    code.startsWith('HOA-MANUAL-') ||
+    notes.includes('walk-in') ||
+    notes.includes('manual admin')
+  );
+};
+
 // 1. Welcome Email
 export const sendWelcomeEmail = async (user) => {
-  if (!user || !user.email) return;
+  if (!user || !user.email || isWalkinEmailOrBooking(user.email)) return;
 
   const subject = `Welcome to House of A's Pickleball Court, ${user.name}!`;
   const content = `
@@ -163,7 +182,7 @@ export const sendBookingConfirmationEmail = async ({ booking, user, courtName, f
   const recipientEmail = user?.email || booking?.user_id?.email;
   const recipientName = user?.name || booking?.user_id?.name || 'Valued Player';
 
-  if (!recipientEmail) return;
+  if (!recipientEmail || isWalkinEmailOrBooking(recipientEmail, booking)) return;
 
   const code = booking.booking_code || `BOOK-${booking.id || booking._id}`;
   const date = booking.booking_date;
@@ -227,7 +246,7 @@ export const sendPaymentReceiptEmail = async ({ payment, booking, user }) => {
   const recipientEmail = user?.email || payment?.user_id?.email || booking?.user_id?.email;
   const recipientName = user?.name || payment?.user_id?.name || 'Valued Player';
 
-  if (!recipientEmail) return;
+  if (!recipientEmail || isWalkinEmailOrBooking(recipientEmail, booking)) return;
 
   const code = booking?.booking_code || `BOOK-${booking?.id || ''}`;
   const amount = Number(payment.amount || booking?.total_amount || 0).toFixed(2);
