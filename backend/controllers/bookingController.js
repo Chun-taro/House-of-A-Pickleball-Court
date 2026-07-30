@@ -114,6 +114,7 @@ export const checkAvailability = async (req, res) => {
       court_id,
       booking_date: date,
       status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+      is_archived: { $ne: true },
     }).select('start_time end_time');
 
     const slots = [];
@@ -204,6 +205,7 @@ export const createBooking = async (req, res) => {
       court_id,
       booking_date,
       status: { $in: ['pending', 'partially_paid', 'approved', 'checked_in', 'completed'] },
+      is_archived: { $ne: true },
     });
 
     const newStartMins = timeToMinutes(start_time);
@@ -358,6 +360,7 @@ export const createManualBookingAdmin = async (req, res) => {
       court_id,
       booking_date,
       status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+      is_archived: { $ne: true },
     });
 
     const newStartMins = timeToMinutes(start_time);
@@ -452,7 +455,7 @@ export const createManualBookingAdmin = async (req, res) => {
 export const getMyBookings = async (req, res) => {
   try {
     const { status } = req.query;
-    const query = { user_id: req.user._id };
+    const query = { user_id: req.user._id, is_archived: { $ne: true } };
 
     if (status) {
       query.status = status;
@@ -660,7 +663,7 @@ export const cancelBooking = async (req, res) => {
 export const getAllBookingsAdmin = async (req, res) => {
   try {
     const { status, date } = req.query;
-    const query = {};
+    const query = { is_archived: { $ne: true } };
 
     if (status) query.status = status;
     if (date) query.booking_date = date;
@@ -701,7 +704,7 @@ export const getAllBookingsAdmin = async (req, res) => {
 // Admin/Staff: Calendar Events API (Includes Customer Name in Title & Details)
 export const getCalendarEventsAdmin = async (req, res) => {
   try {
-    const bookings = await Booking.find({ status: { $ne: 'cancelled' } })
+    const bookings = await Booking.find({ status: { $ne: 'cancelled' }, is_archived: { $ne: true } })
       .populate('user_id', 'name email phone')
       .populate('court_id', 'name')
       .populate('facility_id', 'name');
@@ -806,7 +809,7 @@ export const updateBookingStatusAdmin = async (req, res) => {
 // Public: Calendar Events API (Includes customer name for landing page schedule viewer)
 export const getPublicCalendarEvents = async (req, res) => {
   try {
-    const bookings = await Booking.find({ status: { $in: ['pending', 'approved', 'checked_in', 'completed'] } })
+    const bookings = await Booking.find({ status: { $in: ['pending', 'approved', 'checked_in', 'completed'] }, is_archived: { $ne: true } })
       .populate('user_id', 'name')
       .populate('court_id', 'name');
 
@@ -876,7 +879,7 @@ export const downloadReceiptPdf = async (req, res) => {
   }
 };
 
-// Delete Booking Permanently from Database
+// Soft Delete / Move Booking to Archive (Admin or Owner Customer)
 export const deleteBooking = async (req, res) => {
   try {
     const { id } = req.params;
@@ -886,9 +889,109 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking record not found.' });
     }
 
-    // Authorization check: Strictly Admin or Staff can permanently delete booking records
+    const isOwner = booking.user_id && booking.user_id.toString() === req.user._id.toString();
+    const isAdminStaff = ['admin', 'staff'].includes(req.user.role);
+
+    if (!isOwner && !isAdminStaff) {
+      return res.status(403).json({ success: false, message: 'Access denied. You cannot delete this booking.' });
+    }
+
+    booking.is_archived = true;
+    booking.archived_at = new Date();
+    booking.archived_by = req.user._id;
+    await booking.save();
+
+    return res.json({
+      success: true,
+      message: `Booking ${booking.booking_code} moved to Archive successfully.`,
+      booking,
+    });
+  } catch (error) {
+    console.error('Archive Booking Error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin/Staff: Get All Archived Bookings
+export const getArchivedBookingsAdmin = async (req, res) => {
+  try {
+    const bookings = await Booking.find({ is_archived: true })
+      .populate('user_id', 'name email phone')
+      .populate('facility_id', 'name')
+      .populate('court_id', 'name')
+      .populate('archived_by', 'name email')
+      .sort({ archived_at: -1, updatedAt: -1 });
+
+    const payments = await Payment.find({ booking_id: { $in: bookings.map((b) => b._id) } }).sort({ createdAt: 1 });
+    const paymentMap = {};
+    const paymentsListMap = {};
+    payments.forEach((p) => {
+      const bId = p.booking_id.toString();
+      if (!paymentsListMap[bId]) paymentsListMap[bId] = [];
+      const proofUrl = p.proof_of_payment_url || `/api/payments/proof/${p._id}`;
+      const pObj = { ...p.toObject(), proof_of_payment_url: proofUrl };
+      paymentsListMap[bId].push(pObj);
+      paymentMap[bId] = pObj;
+    });
+
+    const mapped = bookings.map((b) => ({
+      ...b.toObject(),
+      id: b._id,
+      _id: b._id,
+      user_id: b.user_id ? { _id: b.user_id._id, name: b.user_id.name, email: b.user_id.email, phone: b.user_id.phone } : { name: 'Walk-in Guest', email: '', phone: '' },
+      payment: paymentMap[b._id.toString()] || null,
+      payments: paymentsListMap[b._id.toString()] || [],
+    }));
+
+    return res.json({ success: true, bookings: mapped });
+  } catch (error) {
+    console.error('Get Archived Bookings Error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin/Staff: Restore Booking from Archive
+export const restoreBookingAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking record not found.' });
+    }
+
     if (!['admin', 'staff'].includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Access denied. Only Admin and Staff can delete booking records from the database.' });
+      return res.status(403).json({ success: false, message: 'Access denied. Only Admin and Staff can restore archived bookings.' });
+    }
+
+    booking.is_archived = false;
+    booking.archived_at = null;
+    booking.archived_by = null;
+    await booking.save();
+
+    return res.json({
+      success: true,
+      message: `Booking ${booking.booking_code} restored to active bookings successfully.`,
+      booking,
+    });
+  } catch (error) {
+    console.error('Restore Booking Error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin/Staff: Permanently Delete Booking from Database
+export const permanentlyDeleteBookingAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking record not found.' });
+    }
+
+    if (!['admin', 'staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied. Only Admin and Staff can permanently delete records.' });
     }
 
     // Clean up associated proof files from filesystem
@@ -900,19 +1003,14 @@ export const deleteBooking = async (req, res) => {
           try {
             fs.unlinkSync(filePath);
           } catch (e) {
-            console.error('Failed to delete proof file during booking deletion:', e.message);
+            console.error('Failed to delete proof file during booking purge:', e.message);
           }
         }
       }
     }
 
-    // Delete associated payments
     await Payment.deleteMany({ booking_id: id });
-
-    // Delete associated notifications
     await Notification.deleteMany({ booking_id: id });
-
-    // Permanently delete booking document from database
     await Booking.findByIdAndDelete(id);
 
     return res.json({
@@ -920,7 +1018,7 @@ export const deleteBooking = async (req, res) => {
       message: `Booking ${booking.booking_code} and all related records have been permanently deleted from the database.`,
     });
   } catch (error) {
-    console.error('Delete Booking Error:', error);
+    console.error('Permanent Delete Booking Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

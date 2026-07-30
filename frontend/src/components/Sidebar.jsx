@@ -11,6 +11,7 @@ import {
   CreditCard,
   BarChart3,
   Users,
+  Archive,
   X,
 } from 'lucide-react';
 
@@ -35,6 +36,9 @@ export default function Sidebar({ isOpen, onClose }) {
     navItems.push({ label: 'Users', icon: Users, path: '/admin/users' });
   }
 
+  // Place Archive below Users
+  navItems.push({ label: 'Archive', icon: Archive, path: '/admin/archive' });
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -47,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:sticky top-16 sm:top-20 bottom-0 left-0 z-45 lg:z-30 w-64 bg-slate-900 border-r border-slate-800 text-slate-300 h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] lg:self-start p-4 flex flex-col justify-between shadow-xl lg:shadow-none overflow-y-auto transition-transform duration-300 ease-in-out ${
+        className={`fixed top-16 sm:top-20 bottom-0 left-0 z-45 lg:z-30 w-64 bg-slate-900 border-r border-slate-800 text-slate-300 h-[calc(100vh-4rem)] sm:h-[calc(100vh-5rem)] p-4 flex flex-col justify-between shadow-xl lg:shadow-none overflow-y-auto transition-transform duration-300 ease-in-out shrink-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

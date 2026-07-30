@@ -71,11 +71,11 @@ export default function BookingDetails() {
 
   const handleDeletePermanentBooking = async () => {
     const isConfirmed = await confirm({
-      title: 'Delete Booking Record?',
-      message: `Are you sure you want to permanently delete reservation "${booking?.booking_code || id}"? This will remove the booking and all related payment records from the database.`,
-      confirmText: 'Delete Permanently',
+      title: 'Move Booking to Archive?',
+      message: `Are you sure you want to move reservation "${booking?.booking_code || id}" to Archive? It will no longer block court slots or appear in your active reservations list.`,
+      confirmText: 'Move to Archive',
       cancelText: 'Cancel',
-      type: 'danger',
+      type: 'warning',
     });
 
     if (!isConfirmed) return;
@@ -83,15 +83,15 @@ export default function BookingDetails() {
     try {
       const res = await axios.delete(`/api/bookings/${id}`);
       if (res.data.success) {
-        toast.success(res.data.message || `Booking deleted permanently from database.`);
+        toast.success(res.data.message || `Booking moved to Archive.`);
         window.dispatchEvent(new Event('app:data-updated'));
         navigate(-1);
       } else {
-        toast.error(res.data.message || 'Failed to delete booking.');
+        toast.error(res.data.message || 'Failed to archive booking.');
       }
     } catch (err) {
-      console.error('Delete booking error:', err);
-      toast.error(err.response?.data?.message || 'Error deleting booking from database.');
+      console.error('Archive booking error:', err);
+      toast.error(err.response?.data?.message || 'Error moving booking to archive.');
     }
   };
 

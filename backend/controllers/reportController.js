@@ -8,10 +8,10 @@ import Court from '../models/Court.js';
 // Get Admin Dashboard Overview Metrics
 export const getDashboardStats = async (req, res) => {
   try {
-    const totalBookings = await Booking.countDocuments({});
-    const pendingBookings = await Booking.countDocuments({ status: 'pending' });
-    const approvedBookings = await Booking.countDocuments({ status: 'approved' });
-    const completedBookings = await Booking.countDocuments({ status: 'completed' });
+    const totalBookings = await Booking.countDocuments({ is_archived: { $ne: true } });
+    const pendingBookings = await Booking.countDocuments({ status: 'pending', is_archived: { $ne: true } });
+    const approvedBookings = await Booking.countDocuments({ status: 'approved', is_archived: { $ne: true } });
+    const completedBookings = await Booking.countDocuments({ status: 'completed', is_archived: { $ne: true } });
     const activeFacilities = await Facility.countDocuments({ is_active: true });
     const totalCustomers = await User.countDocuments({ role: 'customer' });
 
@@ -21,7 +21,7 @@ export const getDashboardStats = async (req, res) => {
     ]);
     const totalRevenue = revResult.length > 0 ? revResult[0].total : 0;
 
-    const recentBookingsRaw = await Booking.find({})
+    const recentBookingsRaw = await Booking.find({ is_archived: { $ne: true } })
       .populate('user_id', 'name email')
       .populate('facility_id', 'name')
       .populate('court_id', 'name')
@@ -59,7 +59,7 @@ export const getDashboardStats = async (req, res) => {
 // Get Full Analytics Report Data
 export const getReportData = async (req, res) => {
   try {
-    const bookingsRaw = await Booking.find({})
+    const bookingsRaw = await Booking.find({ is_archived: { $ne: true } })
       .populate('user_id', 'name email')
       .populate('facility_id', 'name')
       .populate('court_id', 'name')
@@ -110,7 +110,7 @@ export const getReportData = async (req, res) => {
 // Export CSV Report
 export const exportReportCsv = async (req, res) => {
   try {
-    const bookings = await Booking.find({})
+    const bookings = await Booking.find({ is_archived: { $ne: true } })
       .populate('user_id', 'name email')
       .populate('facility_id', 'name')
       .populate('court_id', 'name')

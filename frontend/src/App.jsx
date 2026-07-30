@@ -25,6 +25,7 @@ import Profile from './pages/customer/Profile';
 // Admin / Staff Pages
 import Dashboard from './pages/admin/Dashboard';
 import BookingsList from './pages/admin/BookingsList';
+import ArchivedBookings from './pages/admin/ArchivedBookings';
 import CalendarView from './pages/admin/CalendarView';
 import FacilitiesAdmin from './pages/admin/FacilitiesAdmin';
 import CourtsAdmin from './pages/admin/CourtsAdmin';
@@ -65,7 +66,7 @@ const AdminLayout = () => {
       </div>
 
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 bg-slate-100/60 overflow-y-auto min-w-0 w-full">
+      <main className="flex-1 lg:pl-64 bg-slate-100/60 min-w-0 w-full">
         <Outlet />
       </main>
     </div>
@@ -75,9 +76,12 @@ const AdminLayout = () => {
 // Public/Customer Layout Component
 const CustomerLayout = () => {
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
-      <Outlet />
-    </main>
+    <>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full">
+        <Outlet />
+      </main>
+      <Footer />
+    </>
   );
 };
 
@@ -114,6 +118,7 @@ export default function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/admin/dashboard" element={<Dashboard />} />
                 <Route path="/admin/bookings" element={<BookingsList />} />
+                <Route path="/admin/archive" element={<ArchivedBookings />} />
                 <Route path="/admin/calendar" element={<CalendarView />} />
                 <Route path="/admin/schedules" element={<SchedulesAdmin />} />
                 <Route path="/admin/payments" element={<PaymentsAdmin />} />
@@ -128,8 +133,6 @@ export default function App() {
               </Route>
             </Route>
           </Routes>
-
-          <Footer />
         </div>
           </Router>
         </AuthProvider>

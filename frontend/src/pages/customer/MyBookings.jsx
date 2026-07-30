@@ -48,11 +48,11 @@ export default function MyBookings() {
 
   const handleDeleteBooking = async (bookingId, bookingCode) => {
     const isConfirmed = await confirm({
-      title: 'Delete Booking Record?',
-      message: `Are you sure you want to permanently delete reservation "${bookingCode}"? This will remove the booking and all related payment records from the database.`,
-      confirmText: 'Delete Permanently',
+      title: 'Remove Booking Record?',
+      message: `Are you sure you want to remove reservation "${bookingCode}"? This booking will be archived and removed from your active reservations list.`,
+      confirmText: 'Yes, Remove Booking',
       cancelText: 'Cancel',
-      type: 'danger',
+      type: 'warning',
     });
 
     if (!isConfirmed) return;
@@ -60,15 +60,15 @@ export default function MyBookings() {
     try {
       const res = await axios.delete(`/api/bookings/${bookingId}`);
       if (res.data.success) {
-        toast.success(res.data.message || `Booking ${bookingCode} deleted permanently.`);
+        toast.success(res.data.message || `Booking ${bookingCode} archived.`);
         fetchMyBookings();
         window.dispatchEvent(new Event('app:data-updated'));
       } else {
-        toast.error(res.data.message || 'Failed to delete booking.');
+        toast.error(res.data.message || 'Failed to remove booking.');
       }
     } catch (err) {
       console.error('Delete booking error:', err);
-      toast.error(err.response?.data?.message || 'Error deleting booking from database.');
+      toast.error(err.response?.data?.message || 'Error removing booking.');
     }
   };
 

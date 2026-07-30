@@ -13,6 +13,9 @@ import {
   updateBookingStatusAdmin,
   downloadReceiptPdf,
   deleteBooking,
+  getArchivedBookingsAdmin,
+  restoreBookingAdmin,
+  permanentlyDeleteBookingAdmin,
 } from '../controllers/bookingController.js';
 import { protect, requireRole } from '../middleware/auth.js';
 import { uploadProof } from '../middleware/upload.js';
@@ -34,12 +37,15 @@ router.get('/:id/receipt', downloadReceiptPdf);
 
 // Shared Admin/Staff routes
 router.get('/admin/all', protect, requireRole('admin', 'staff'), getAllBookingsAdmin);
+router.get('/admin/archived', protect, requireRole('admin', 'staff'), getArchivedBookingsAdmin);
+router.patch('/admin/:id/restore', protect, requireRole('admin', 'staff'), restoreBookingAdmin);
+router.delete('/admin/:id/permanent', protect, requireRole('admin', 'staff'), permanentlyDeleteBookingAdmin);
 router.get('/admin/calendar-events', protect, requireRole('admin', 'staff'), getCalendarEventsAdmin);
 router.post('/admin/manual-booking', protect, requireRole('admin', 'staff'), createManualBookingAdmin);
 router.patch('/admin/:id/status', protect, requireRole('admin', 'staff'), updateBookingStatusAdmin);
 router.delete('/admin/:id', protect, requireRole('admin', 'staff'), deleteBooking);
 
-// Permanent Delete Booking Route (Admin, Staff, or Owner)
+// Soft Delete / Move to Archive Route (Admin, Staff, or Owner)
 router.delete('/:id', protect, deleteBooking);
 
 // Single booking view (Customer or Admin)

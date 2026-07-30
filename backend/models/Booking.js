@@ -30,6 +30,9 @@ const bookingSchema = new mongoose.Schema(
     },
     notes: { type: String, default: '' },
     cancellation_reason: { type: String, default: '' },
+    is_archived: { type: Boolean, default: false, index: true },
+    archived_at: { type: Date, default: null },
+    archived_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );
