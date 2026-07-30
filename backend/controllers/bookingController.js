@@ -285,6 +285,8 @@ export const createBooking = async (req, res) => {
       await payment.save();
     }
 
+    const isPaidOnline = true;
+
     // Await confirmation email for Vercel Serverless environment
     await sendBookingConfirmationEmail({
       booking,
