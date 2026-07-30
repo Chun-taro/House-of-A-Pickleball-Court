@@ -137,6 +137,14 @@
   height: 2.2rem !important;
 }
 
+.fc .fc-timegrid-slot-label-cushion {
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  color: #334155 !important;
+  white-space: nowrap !important;
+  padding: 2px 4px !important;
+}
+
 .fc .fc-col-header-cell-cushion {
   font-size: 0.8rem !important;
   font-weight: 700 !important;

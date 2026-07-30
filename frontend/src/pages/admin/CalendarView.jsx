@@ -135,8 +135,18 @@ export default function CalendarView() {
               displayEventTime={false}
               events={events}
               slotMinTime="05:00:00"
-              slotMaxTime="24:00:00"
+              slotMaxTime="23:00:00"
               slotDuration="01:00:00"
+              slotLabelContent={(arg) => {
+                const startHour = arg.date.getHours();
+                const endHour = (startHour + 1) % 24;
+                const formatHour = (h) => {
+                  const ampm = h >= 12 ? 'pm' : 'am';
+                  const h12 = h % 12 || 12;
+                  return `${h12}${ampm}`;
+                };
+                return `${formatHour(startHour)}-${formatHour(endHour)}`;
+              }}
               allDaySlot={false}
               height="auto"
               contentHeight="auto"
