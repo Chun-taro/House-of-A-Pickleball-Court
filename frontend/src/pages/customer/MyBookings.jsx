@@ -169,14 +169,6 @@ export default function MyBookings() {
                 >
                   Details <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
-
-                <button
-                  onClick={() => handleDeleteBooking(b._id, b.booking_code)}
-                  className="p-2 rounded-xl text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors flex items-center justify-center cursor-pointer"
-                  title="Permanently Delete Booking Record from Database"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             </div>
           ))}

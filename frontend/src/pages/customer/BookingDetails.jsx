@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 import PdfReceiptModal from '../../components/PdfReceiptModal';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -8,6 +9,7 @@ import { useToast } from '../../components/Toast';
 import { Calendar, Clock, Trophy, MapPin, CreditCard, ArrowLeft, XCircle, Download, Info, FileText, Trash2 } from 'lucide-react';
 
 export default function BookingDetails() {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const confirm = useConfirm();
@@ -336,13 +338,15 @@ export default function BookingDetails() {
               </button>
             )}
 
-            <button
-              onClick={handleDeletePermanentBooking}
-              className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Permanently Delete Booking Record from Database"
-            >
-              <Trash2 className="w-4 h-4" /> Delete Record
-            </button>
+            {['admin', 'staff'].includes(user?.role) && (
+              <button
+                onClick={handleDeletePermanentBooking}
+                className="px-4 py-2.5 rounded-xl text-xs font-extrabold text-rose-700 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Permanently Delete Booking Record from Database"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Record
+              </button>
+            )}
           </div>
         </div>
       </div>

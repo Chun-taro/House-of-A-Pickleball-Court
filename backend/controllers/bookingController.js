@@ -886,12 +886,9 @@ export const deleteBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking record not found.' });
     }
 
-    // Authorization check: Admin, Staff, or owner of the booking
-    const isOwner = booking.user_id && booking.user_id.toString() === req.user._id.toString();
-    const isAdminStaff = ['admin', 'staff'].includes(req.user.role);
-
-    if (!isOwner && !isAdminStaff) {
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this booking.' });
+    // Authorization check: Strictly Admin or Staff can permanently delete booking records
+    if (!['admin', 'staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied. Only Admin and Staff can delete booking records from the database.' });
     }
 
     // Clean up associated proof files from filesystem
