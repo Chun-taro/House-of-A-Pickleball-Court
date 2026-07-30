@@ -106,14 +106,16 @@ export default function DatabaseStorageWidget({ compact = false }) {
     collectionsCount = 0,
   } = stats;
 
-  // Determine meter color threshold
+  const usedMBNum = parseFloat(totalUsedMB || '0');
+
+  // Determine meter color threshold (Warning triggers at 50 MB+ or 70%+ capacity)
   let statusColor = 'emerald';
   let StatusIcon = CheckCircle2;
 
-  if (usedPercentage >= 90) {
+  if (usedPercentage >= 90 || usedMBNum >= 450) {
     statusColor = 'rose';
     StatusIcon = ShieldAlert;
-  } else if (usedPercentage >= 70) {
+  } else if (usedMBNum >= 50 || usedPercentage >= 70) {
     statusColor = 'amber';
     StatusIcon = AlertTriangle;
   }
@@ -161,6 +163,22 @@ export default function DatabaseStorageWidget({ compact = false }) {
           <span>{refreshing ? 'Refreshing...' : 'Refresh Storage'}</span>
         </button>
       </div>
+
+      {/* 50MB+ Storage Warning Banner */}
+      {(usedMBNum >= 50 || usedPercentage >= 70) && (
+        <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex items-start gap-3 shadow-sm">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <h4 className="font-black text-xs uppercase tracking-wider text-amber-900 flex items-center gap-2">
+              Storage Warning: Usage Reached {totalUsedMB} MB
+              <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 font-mono text-[10px]">50 MB+ Alert Threshold</span>
+            </h4>
+            <p className="text-xs text-amber-800 font-medium leading-relaxed">
+              Your database storage usage has passed <strong>50 MB</strong> ({totalUsedMB} MB used). The system is getting closer to capacity limit ({maxStorageMB} MB). Monitor your storage to prevent hitting full capacity.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Primary Available Storage Callout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -257,7 +275,7 @@ export default function DatabaseStorageWidget({ compact = false }) {
             Storage Health
           </span>
           <p className={`text-sm font-extrabold mt-1 text-${statusColor}-600`}>
-            {usedPercentage >= 90 ? 'Critical' : usedPercentage >= 70 ? 'Warning' : 'Optimal'}
+            {usedPercentage >= 90 || usedMBNum >= 450 ? 'Critical' : (usedMBNum >= 50 || usedPercentage >= 70) ? 'Warning (50MB+)' : 'Optimal'}
           </p>
         </div>
       </div>
