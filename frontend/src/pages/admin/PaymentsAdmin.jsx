@@ -68,63 +68,76 @@ export default function PaymentsAdmin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {payments.map((p) => (
-                  <tr key={p._id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-mono font-bold text-emerald-800">
-                      {p.booking_id?.booking_code || '-'}
-                    </td>
-                    <td className="p-3">
-                      <div className="font-bold text-slate-900">{p.user_id?.name || 'Guest'}</div>
-                      <div className="text-[10px] text-slate-500">{p.user_id?.phone || p.user_id?.email}</div>
-                    </td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border bg-slate-100 text-slate-800">
-                        {p.transaction_type === 'partial_initial'
-                          ? '1st Deposit'
-                          : p.transaction_type === 'partial_balance'
-                          ? '2nd Balance'
-                          : 'Full Pay'}
-                      </span>
-                    </td>
-                    <td className="p-3 font-extrabold text-slate-900">₱{p.amount?.toFixed(2)}</td>
-                    <td className="p-3 font-bold font-mono">
-                      {p.booking_id ? (
-                        <span className={p.booking_id.remaining_balance > 0 ? 'text-amber-700' : 'text-emerald-700'}>
-                          ₱{p.booking_id.remaining_balance?.toFixed(2)}
+                {payments.map((p) => {
+                  const isWalkIn = 
+                    !p.user_id?.email ||
+                    p.user_id?.email?.includes('walkin_') ||
+                    p.user_id?.email?.endsWith('@houseofas.com') ||
+                    p.user_id?.name?.toLowerCase().includes('walk-in') ||
+                    p.user_id?.name?.toLowerCase().includes('walkin') ||
+                    p.booking_id?.booking_code?.includes('MANUAL');
+
+                  return (
+                    <tr key={p._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-mono font-bold text-emerald-800">
+                        {p.booking_id?.booking_code || '-'}
+                      </td>
+                      <td className="p-3">
+                        <div className="font-bold text-slate-900">{p.user_id?.name || 'Guest'}</div>
+                        <div className="text-[10px] text-slate-500">{p.user_id?.phone || p.user_id?.email}</div>
+                      </td>
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border bg-slate-100 text-slate-800">
+                          {p.transaction_type === 'partial_initial'
+                            ? '1st Deposit'
+                            : p.transaction_type === 'partial_balance'
+                            ? '2nd Balance'
+                            : 'Full Pay'}
                         </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td className="p-3 font-mono text-[11px] text-slate-600">{p.reference_number || '-'}</td>
-                    
-                    {/* Proof of Payment Cell */}
-                    <td className="p-3">
-                      {p.proof_of_payment_url ? (
-                        <button
-                          onClick={() => {
-                            setProofImgError(false);
-                            setActiveProofIdx(0);
-                            setSelectedProof(p);
-                          }}
-                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold rounded-lg text-[10px] inline-flex items-center gap-1 transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-3 h-3 text-blue-600" /> View Proof
-                        </button>
-                      ) : p.proof_status === 'expired_deleted' ? (
-                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                          Purged (2-3d Retention)
-                        </span>
-                      ) : p.payment_method === 'cash' ? (
-                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-flex items-center gap-1">
-                          Cash (No Proof Needed)
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          No Proof Uploaded
-                        </span>
-                      )}
-                    </td>
+                      </td>
+                      <td className="p-3 font-extrabold text-slate-900">₱{p.amount?.toFixed(2)}</td>
+                      <td className="p-3 font-bold font-mono">
+                        {p.booking_id ? (
+                          <span className={p.booking_id.remaining_balance > 0 ? 'text-amber-700' : 'text-emerald-700'}>
+                            ₱{p.booking_id.remaining_balance?.toFixed(2)}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="p-3 font-mono text-[11px] text-slate-600">{p.reference_number || '-'}</td>
+                      
+                      {/* Proof of Payment Cell */}
+                      <td className="p-3">
+                        {isWalkIn ? (
+                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 inline-flex items-center gap-1">
+                            Walk-in (No Proof Needed)
+                          </span>
+                        ) : p.proof_of_payment_url ? (
+                          <button
+                            onClick={() => {
+                              setProofImgError(false);
+                              setActiveProofIdx(0);
+                              setSelectedProof(p);
+                            }}
+                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-extrabold rounded-lg text-[10px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3 text-blue-600" /> View Proof
+                          </button>
+                        ) : p.proof_status === 'expired_deleted' ? (
+                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                            Purged (2-3d Retention)
+                          </span>
+                        ) : p.payment_method === 'cash' ? (
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-flex items-center gap-1">
+                            Cash (No Proof Needed)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                            No Proof Uploaded
+                          </span>
+                        )}
+                      </td>
 
                     <td className="p-3">
                       <StatusBadge status={p.verification_status === 'verified' ? 'paid' : p.verification_status === 'rejected' ? 'failed' : 'pending_verification'} />
@@ -162,7 +175,8 @@ export default function PaymentsAdmin() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>

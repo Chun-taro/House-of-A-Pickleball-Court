@@ -219,6 +219,15 @@ export default function BookingsList() {
                   const remaining = Math.max(0, (b.total_amount || 0) - paid);
                   const method = b.payment_method || b.payment?.payment_method || 'cash';
                   const isCash = method === 'cash';
+                  const isWalkIn = 
+                    !b.user_id?.email ||
+                    b.user_id?.email?.includes('walkin_') ||
+                    b.user_id?.email?.endsWith('@houseofas.com') ||
+                    b.user_id?.name?.toLowerCase().includes('walk-in') ||
+                    b.user_id?.name?.toLowerCase().includes('walkin') ||
+                    b.notes?.toLowerCase().includes('walk-in') ||
+                    b.notes?.toLowerCase().includes('walkin') ||
+                    b.booking_code?.includes('MANUAL');
 
                   return (
                     <tr key={b._id} className="hover:bg-slate-50/80 transition-colors">
@@ -257,7 +266,7 @@ export default function BookingsList() {
                       <td className="p-3"><StatusBadge status={b.status} /></td>
                       <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {!isCash && b.payment?.proof_of_payment_url && (
+                        {!isCash && !isWalkIn && b.payment?.proof_of_payment_url && (
                           <button
                             onClick={() => {
                               setProofImgError(false);

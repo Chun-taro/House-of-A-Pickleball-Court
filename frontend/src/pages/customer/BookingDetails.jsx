@@ -302,7 +302,7 @@ export default function BookingDetails() {
 
                   <div className="flex items-center gap-3">
                     <StatusBadge status={p.verification_status === 'verified' ? 'paid' : p.verification_status === 'rejected' ? 'failed' : 'pending_verification'} />
-                    {p.proof_of_payment_url && (
+                    {!booking.user_id?.email?.includes('walkin_') && !booking.booking_code?.includes('MANUAL') && p.proof_of_payment_url && (
                       <a
                         href={p.proof_of_payment_url}
                         target="_blank"
