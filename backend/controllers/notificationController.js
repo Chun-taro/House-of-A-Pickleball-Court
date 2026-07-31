@@ -15,7 +15,7 @@ export const getNotifications = async (req, res) => {
       : {
           $or: [
             { user_id: req.user._id },
-            { for_role: { $in: ['customer', 'all_users'] } },
+            { for_role: 'all_users' },
           ],
         };
 
