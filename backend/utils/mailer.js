@@ -4,8 +4,9 @@ dotenv.config();
 
 // Create fresh Nodemailer Transporter per email dispatch to avoid serverless frozen socket timeouts
 const getTransporter = () => {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = process.env.GMAIL_USER ? process.env.GMAIL_USER.trim() : '';
+  const rawPass = process.env.GMAIL_APP_PASSWORD || '';
+  const pass = rawPass.replace(/\s+/g, '').trim();
 
   if (!user || !pass || pass === 'your_16_char_app_password') {
     return null;

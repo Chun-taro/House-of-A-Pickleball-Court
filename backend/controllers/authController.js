@@ -50,9 +50,14 @@ export const register = async (req, res) => {
       });
     }
 
+    console.log(`[Register OTP Code] Email: ${lowerEmail} | Code: ${otpCode}`);
+
     // Await 6-digit verification code email so Vercel Serverless Function doesn't kill the connection
-    await sendVerificationCodeEmail({ name, email: lowerEmail, code: otpCode })
+    const mailResult = await sendVerificationCodeEmail({ name, email: lowerEmail, code: otpCode })
       .catch((err) => console.error('Verification Mailer error:', err));
+    if (mailResult && mailResult.success === false) {
+      console.warn(`[Register Mailer Warning] Email dispatch to ${lowerEmail} failed:`, mailResult.error || mailResult.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -168,9 +173,14 @@ export const resendOTP = async (req, res) => {
     user.verification_expires_at = expiresAt;
     await user.save();
 
+    console.log(`[Resend OTP Code] Email: ${lowerEmail} | Code: ${otpCode}`);
+
     // Await new verification email in serverless environment
-    await sendVerificationCodeEmail({ name: user.name, email: lowerEmail, code: otpCode })
+    const mailResult = await sendVerificationCodeEmail({ name: user.name, email: lowerEmail, code: otpCode })
       .catch((err) => console.error('Resend Mailer error:', err));
+    if (mailResult && mailResult.success === false) {
+      console.warn(`[Resend Mailer Warning] Email dispatch to ${lowerEmail} failed:`, mailResult.error || mailResult.message);
+    }
 
     return res.json({
       success: true,
@@ -202,7 +212,13 @@ export const login = async (req, res) => {
         user.verification_expires_at = expiresAt;
         await user.save();
 
-        await sendVerificationCodeEmail({ name: user.name, email: user.email, code: otpCode }).catch(err => console.error(err));
+        console.log(`[Login Unverified OTP Code] Email: ${user.email} | Code: ${otpCode}`);
+
+        const mailResult = await sendVerificationCodeEmail({ name: user.name, email: user.email, code: otpCode })
+          .catch(err => console.error('Login Verification Mailer error:', err));
+        if (mailResult && mailResult.success === false) {
+          console.warn(`[Login Mailer Warning] Email dispatch to ${user.email} failed:`, mailResult.error || mailResult.message);
+        }
 
         return res.status(403).json({
           success: false,
