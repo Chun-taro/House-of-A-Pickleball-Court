@@ -13,7 +13,6 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
-import { startCleanupScheduler } from './services/cleanupService.js';
 
 const app = express();
 

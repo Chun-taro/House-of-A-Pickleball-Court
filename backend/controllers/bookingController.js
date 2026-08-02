@@ -11,12 +11,48 @@ import Notification from '../models/Notification.js';
 import { sendBookingConfirmationEmail, sendPaymentReceiptEmail, sendAdminNewBookingEmail } from '../utils/mailer.js';
 import { generatePdfReceipt } from '../utils/pdfReceiptGenerator.js';
 
-// Helper to convert "HH:MM" string to total minutes from midnight
+// Shared constant defining all active non-cancelled booking statuses that occupy court schedule
+const ACTIVE_BOOKING_STATUSES = ['pending', 'partially_paid', 'approved', 'checked_in', 'completed'];
+
+// Helper to normalize date strings to YYYY-MM-DD
+const normalizeDateStr = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string') {
+    return dateStr.split('T')[0].trim();
+  }
+  if (dateStr instanceof Date) {
+    return dateStr.toISOString().split('T')[0];
+  }
+  return String(dateStr).split('T')[0].trim();
+};
+
+// Helper to convert any time format to standard 24-hour "HH:MM" (e.g. "8:00 PM" -> "20:00")
+const formatTimeTo24h = (timeStr) => {
+  if (!timeStr) return '00:00';
+  let str = String(timeStr).trim().toUpperCase();
+  const isPM = str.includes('PM');
+  const isAM = str.includes('AM');
+  str = str.replace(/AM|PM/g, '').trim();
+  const parts = str.split(':');
+  let h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+// Helper to convert time string (24-hour "HH:MM", "HH:MM:SS" or 12-hour "H:MM AM/PM") to total minutes from midnight
 const timeToMinutes = (timeStr) => {
   if (!timeStr) return 0;
-  const parts = timeStr.split(':');
-  const h = parseInt(parts[0], 10) || 0;
+  let str = String(timeStr).trim().toUpperCase();
+  const isPM = str.includes('PM');
+  const isAM = str.includes('AM');
+  str = str.replace(/AM|PM/g, '').trim();
+  const parts = str.split(':');
+  let h = parseInt(parts[0], 10) || 0;
   const m = parseInt(parts[1], 10) || 0;
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
   return h * 60 + m;
 };
 
@@ -57,9 +93,10 @@ export const checkAvailability = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Facility, Court, and Date are required.' });
     }
 
+    const formattedDate = normalizeDateStr(date);
     const duration = Math.max(1, Math.min(18, parseInt(duration_hours, 10) || 1));
 
-    const bookingDate = new Date(date);
+    const bookingDate = new Date(formattedDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -69,11 +106,11 @@ export const checkAvailability = async (req, res) => {
 
     // Check Holiday
     const holidays = await Holiday.find({
-      $or: [{ holiday_date: date }, { is_recurring: true }],
+      $or: [{ holiday_date: formattedDate }, { is_recurring: true }],
       $and: [{ $or: [{ facility_id: null }, { facility_id }] }],
     });
 
-    const activeHoliday = holidays.find((h) => h.holiday_date === date);
+    const activeHoliday = holidays.find((h) => h.holiday_date === formattedDate);
     if (activeHoliday) {
       return res.json({
         success: false,
@@ -112,8 +149,8 @@ export const checkAvailability = async (req, res) => {
     // Get existing active bookings for this court on this date
     const existingBookings = await Booking.find({
       court_id,
-      booking_date: date,
-      status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+      booking_date: formattedDate,
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       is_archived: { $ne: true },
     }).select('start_time end_time');
 
@@ -200,16 +237,20 @@ export const createBooking = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Selected facility or court does not exist.' });
     }
 
+    const formattedDate = normalizeDateStr(booking_date);
+    const formattedStartTime = formatTimeTo24h(start_time);
+    const formattedEndTime = formatTimeTo24h(end_time);
+
     // Double check availability against existing bookings
     const activeBookings = await Booking.find({
       court_id,
-      booking_date,
-      status: { $in: ['pending', 'partially_paid', 'approved', 'checked_in', 'completed'] },
+      booking_date: formattedDate,
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       is_archived: { $ne: true },
     });
 
-    const newStartMins = timeToMinutes(start_time);
-    const newEndMins = timeToMinutes(end_time);
+    const newStartMins = timeToMinutes(formattedStartTime);
+    const newEndMins = timeToMinutes(formattedEndTime);
 
     const hasOverlap = activeBookings.some((b) => {
       const bStart = timeToMinutes(b.start_time);
@@ -223,12 +264,12 @@ export const createBooking = async (req, res) => {
 
     const duration_hours = Math.max(0.5, (newEndMins - newStartMins) / 60);
 
-    const subtotal = calculateTieredPrice(start_time, end_time);
+    const subtotal = calculateTieredPrice(formattedStartTime, formattedEndTime);
     const hourly_rate = duration_hours > 0 ? subtotal / duration_hours : 150;
     const tax_amount = 0;
     const total_amount = subtotal + tax_amount;
 
-    const dateCode = booking_date.replace(/-/g, '');
+    const dateCode = formattedDate.replace(/-/g, '');
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const booking_code = `HOA-${dateCode}-${randomStr}`;
 
@@ -237,9 +278,9 @@ export const createBooking = async (req, res) => {
       user_id: req.user._id,
       facility_id,
       court_id,
-      booking_date,
-      start_time,
-      end_time,
+      booking_date: formattedDate,
+      start_time: formattedStartTime,
+      end_time: formattedEndTime,
       duration_hours,
       hourly_rate,
       subtotal,
@@ -363,16 +404,20 @@ export const createManualBookingAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Facility or Court not found.' });
     }
 
+    const formattedDate = normalizeDateStr(booking_date);
+    const formattedStartTime = formatTimeTo24h(start_time);
+    const formattedEndTime = formatTimeTo24h(end_time);
+
     // Check overlap with existing active bookings
     const activeBookings = await Booking.find({
       court_id,
-      booking_date,
-      status: { $in: ['pending', 'approved', 'checked_in', 'completed'] },
+      booking_date: formattedDate,
+      status: { $in: ACTIVE_BOOKING_STATUSES },
       is_archived: { $ne: true },
     });
 
-    const newStartMins = timeToMinutes(start_time);
-    const newEndMins = timeToMinutes(end_time);
+    const newStartMins = timeToMinutes(formattedStartTime);
+    const newEndMins = timeToMinutes(formattedEndTime);
 
     const overlapBooking = activeBookings.find((b) => {
       const bStart = timeToMinutes(b.start_time);
@@ -383,7 +428,7 @@ export const createManualBookingAdmin = async (req, res) => {
     if (overlapBooking) {
       return res.status(400).json({
         success: false,
-        message: `Cannot book time slot ${start_time} - ${end_time}. It overlaps with existing booking [${overlapBooking.booking_code}].`,
+        message: `Cannot book time slot ${formattedStartTime} - ${formattedEndTime}. It overlaps with existing booking [${overlapBooking.booking_code}].`,
       });
     }
 
@@ -410,12 +455,12 @@ export const createManualBookingAdmin = async (req, res) => {
 
     const duration_hours = Math.max(0.5, (newEndMins - newStartMins) / 60);
 
-    const subtotal = calculateTieredPrice(start_time, end_time);
+    const subtotal = calculateTieredPrice(formattedStartTime, formattedEndTime);
     const hourly_rate = duration_hours > 0 ? subtotal / duration_hours : 150;
     const tax_amount = 0;
     const total_amount = subtotal + tax_amount;
 
-    const dateCode = booking_date.replace(/-/g, '');
+    const dateCode = formattedDate.replace(/-/g, '');
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const booking_code = `HOA-MANUAL-${dateCode}-${randomStr}`;
 
@@ -424,9 +469,9 @@ export const createManualBookingAdmin = async (req, res) => {
       user_id: targetUserId,
       facility_id,
       court_id,
-      booking_date,
-      start_time,
-      end_time,
+      booking_date: formattedDate,
+      start_time: formattedStartTime,
+      end_time: formattedEndTime,
       duration_hours,
       hourly_rate,
       subtotal,
@@ -723,18 +768,20 @@ export const getAllBookingsAdmin = async (req, res) => {
 // Admin/Staff: Calendar Events API (Includes Customer Name in Title & Details)
 export const getCalendarEventsAdmin = async (req, res) => {
   try {
-    const bookings = await Booking.find({ status: { $ne: 'cancelled' }, is_archived: { $ne: true } })
+    const bookings = await Booking.find({ status: { $in: ACTIVE_BOOKING_STATUSES }, is_archived: { $ne: true } })
       .populate('user_id', 'name email phone')
       .populate('court_id', 'name')
       .populate('facility_id', 'name');
 
     const events = bookings.map((b) => {
       const customerName = b.user_id?.name || 'Walk-in Customer';
+      const startTime24 = formatTimeTo24h(b.start_time);
+      const endTime24 = formatTimeTo24h(b.end_time);
       return {
         id: b._id,
         title: `${customerName} (${b.court_id?.name || 'Court'})`,
-        start: `${b.booking_date}T${b.start_time}`,
-        end: `${b.booking_date}T${b.end_time}`,
+        start: `${b.booking_date}T${startTime24}`,
+        end: `${b.booking_date}T${endTime24}`,
         status: b.status,
         booking_code: b.booking_code,
         customer_name: customerName,
@@ -743,8 +790,8 @@ export const getCalendarEventsAdmin = async (req, res) => {
         court_name: b.court_id?.name || 'Court',
         facility_name: b.facility_id?.name || '',
         booking_date: b.booking_date,
-        start_time: b.start_time,
-        end_time: b.end_time,
+        start_time: startTime24,
+        end_time: endTime24,
         payment_type: b.payment_type,
         total_amount: b.total_amount,
         paid_amount: b.paid_amount,
@@ -836,23 +883,25 @@ export const updateBookingStatusAdmin = async (req, res) => {
 // Public: Calendar Events API (Includes customer name for landing page schedule viewer)
 export const getPublicCalendarEvents = async (req, res) => {
   try {
-    const bookings = await Booking.find({ status: { $in: ['pending', 'approved', 'checked_in', 'completed'] }, is_archived: { $ne: true } })
+    const bookings = await Booking.find({ status: { $in: ACTIVE_BOOKING_STATUSES }, is_archived: { $ne: true } })
       .populate('user_id', 'name')
       .populate('court_id', 'name');
 
     const events = bookings.map((b) => {
       const customerName = b.user_id?.name || 'Reserved Customer';
+      const startTime24 = formatTimeTo24h(b.start_time);
+      const endTime24 = formatTimeTo24h(b.end_time);
       return {
         id: b._id,
         title: `Reserved: ${customerName}`,
-        start: `${b.booking_date}T${b.start_time}`,
-        end: `${b.booking_date}T${b.end_time}`,
+        start: `${b.booking_date}T${startTime24}`,
+        end: `${b.booking_date}T${endTime24}`,
         status: b.status,
         customer_name: customerName,
         court_name: b.court_id?.name || 'Court',
         booking_date: b.booking_date,
-        start_time: b.start_time,
-        end_time: b.end_time,
+        start_time: startTime24,
+        end_time: endTime24,
       };
     });
 
