@@ -37,7 +37,7 @@ export default function ReportsAdmin() {
   useEffect(() => {
     fetchReports();
 
-    const timer = setInterval(fetchReports, 5000);
+    const timer = setInterval(fetchReports, 60000);
     const handleRefetch = () => fetchReports();
     window.addEventListener('focus', handleRefetch);
     window.addEventListener('app:data-updated', handleRefetch);

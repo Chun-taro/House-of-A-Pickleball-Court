@@ -64,8 +64,8 @@ export default function BookingsList() {
   useEffect(() => {
     fetchBookings();
 
-    // Auto-refresh callback polling interval (every 5 seconds)
-    const interval = setInterval(fetchBookings, 5000);
+    // Auto-refresh callback polling interval (every 60 seconds)
+    const interval = setInterval(fetchBookings, 60000);
 
     // Auto-refresh when tab gains focus or global data event fires
     const handleAutoRefresh = () => fetchBookings();

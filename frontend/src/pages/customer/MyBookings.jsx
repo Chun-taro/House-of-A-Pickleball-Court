@@ -34,7 +34,7 @@ export default function MyBookings() {
   useEffect(() => {
     fetchMyBookings();
 
-    const timer = setInterval(fetchMyBookings, 5000);
+    const timer = setInterval(fetchMyBookings, 60000);
     const handleRefetch = () => fetchMyBookings();
     window.addEventListener('focus', handleRefetch);
     window.addEventListener('app:data-updated', handleRefetch);

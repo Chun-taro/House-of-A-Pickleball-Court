@@ -57,7 +57,7 @@ export default function BookingDetails() {
   useEffect(() => {
     fetchDetails();
 
-    const timer = setInterval(fetchDetails, 5000);
+    const timer = setInterval(fetchDetails, 60000);
     const handleRefetch = () => fetchDetails();
     window.addEventListener('focus', handleRefetch);
     window.addEventListener('app:data-updated', handleRefetch);

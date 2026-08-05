@@ -62,7 +62,7 @@ export default function CalendarView() {
   useEffect(() => {
     fetchEvents();
 
-    const timer = setInterval(fetchEvents, 5000);
+    const timer = setInterval(fetchEvents, 60000);
     const handleRefetch = () => fetchEvents();
     window.addEventListener('focus', handleRefetch);
     window.addEventListener('app:data-updated', handleRefetch);

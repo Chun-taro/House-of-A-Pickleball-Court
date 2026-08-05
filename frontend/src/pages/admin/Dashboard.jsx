@@ -24,7 +24,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboard();
 
-    const timer = setInterval(fetchDashboard, 5000);
+    const timer = setInterval(fetchDashboard, 60000);
     const handleRefetch = () => fetchDashboard();
     window.addEventListener('focus', handleRefetch);
     window.addEventListener('app:data-updated', handleRefetch);
