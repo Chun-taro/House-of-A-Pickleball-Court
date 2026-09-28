@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, Clock, Trophy, CreditCard, AlertCircle, ShieldCheck, Timer, Upload, FileImage, Info, X, CheckCircle, QrCode, Smartphone, ZoomIn } from 'lucide-react';
+import { Calendar, Clock, Trophy, CreditCard, AlertCircle, ShieldCheck, Timer, Upload, FileImage, Info, X, CheckCircle, QrCode, Smartphone, ZoomIn, CalendarX } from 'lucide-react';
 import gcashQrImg from '../../images/Gcash.jpg';
 
 export default function BookingWizard() {
@@ -25,6 +25,8 @@ export default function BookingWizard() {
   const [slots, setSlots] = useState([]);
   const [hourlyRate, setHourlyRate] = useState(150);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [isClosedDate, setIsClosedDate] = useState(false);
+  const [closureReason, setClosureReason] = useState('');
   const [paymentMethod] = useState('gcash');
   const [paymentType] = useState('full');
   const [notes, setNotes] = useState('');
@@ -90,13 +92,19 @@ export default function BookingWizard() {
         if (res.data.success) {
           setSlots(res.data.slots);
           setHourlyRate(res.data.hourly_rate);
+          setIsClosedDate(false);
+          setClosureReason('');
         } else {
           setSlots([]);
+          setIsClosedDate(res.data.is_closed || false);
+          setClosureReason(res.data.message || 'Facility is closed on this date.');
           setMessage({ type: 'warning', text: res.data.message });
         }
       })
       .catch((err) => {
         setSlots([]);
+        setIsClosedDate(false);
+        setClosureReason('');
         setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to check slot availability.' });
       })
       .finally(() => setCheckingSlots(false));
@@ -324,6 +332,17 @@ export default function BookingWizard() {
             
             {checkingSlots ? (
               <p className="text-xs text-slate-500 py-4">Checking slot availability for {durationHours} hour(s)...</p>
+            ) : isClosedDate ? (
+              <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2 my-2">
+                <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                  <CalendarX className="w-5 h-5" />
+                </div>
+                <h3 className="text-sm font-extrabold text-rose-900">Facility Closed on Selected Date</h3>
+                <p className="text-xs text-rose-700 max-w-md mx-auto">{closureReason}</p>
+                <p className="text-[11px] text-rose-600 font-semibold pt-1">
+                  Please pick another date from the calendar to view available court time slots.
+                </p>
+              </div>
             ) : slots.length === 0 ? (
               <p className="text-xs text-amber-700 py-4">No available consecutive {durationHours}-hour slots for the selected date.</p>
             ) : (

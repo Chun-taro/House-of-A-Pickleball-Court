@@ -84,6 +84,86 @@ export const calculateTieredPrice = (startTimeStr, endTimeStr) => {
   return total;
 };
 
+// Helper to check if a target date matches a holiday blackout
+export const checkHolidayBlackout = (holiday, targetDateStr) => {
+  if (!holiday || !targetDateStr) return false;
+  const dateStr = normalizeDateStr(targetDateStr);
+  const startStr = normalizeDateStr(holiday.holiday_date);
+
+  // If recurring annually, compare MM-DD
+  if (holiday.is_recurring) {
+    const hMonthDay = startStr.slice(5);
+    const targetMonthDay = dateStr.slice(5);
+    if (hMonthDay === targetMonthDay) return true;
+  }
+
+  // If multi-day blackout range (end_date provided)
+  if (holiday.end_date) {
+    const endStr = normalizeDateStr(holiday.end_date);
+    if (dateStr >= startStr && dateStr <= endStr) return true;
+  }
+
+  return startStr === dateStr;
+};
+
+// Helper to generate FullCalendar event objects for holidays
+export const generateHolidayCalendarEvents = (holidays) => {
+  const holidayEvents = [];
+  const curYear = new Date().getFullYear();
+
+  holidays.forEach((h) => {
+    const rawStart = normalizeDateStr(h.holiday_date);
+    const rawEnd = normalizeDateStr(h.end_date || h.holiday_date);
+    const isMultiDay = rawEnd && rawEnd > rawStart;
+
+    // If recurring annually, project onto previous, current, and next years
+    const years = h.is_recurring ? [curYear - 1, curYear, curYear + 1] : [null];
+
+    years.forEach((yr) => {
+      let start = rawStart;
+      let end = undefined;
+
+      if (yr && rawStart.length >= 10) {
+        start = `${yr}-${rawStart.slice(5)}`;
+        if (isMultiDay) {
+          const endYearStr = `${yr}-${rawEnd.slice(5)}`;
+          const endDateObj = new Date(endYearStr);
+          endDateObj.setDate(endDateObj.getDate() + 1);
+          end = endDateObj.toISOString().split('T')[0];
+        }
+      } else if (isMultiDay) {
+        const endDateObj = new Date(rawEnd);
+        endDateObj.setDate(endDateObj.getDate() + 1);
+        end = endDateObj.toISOString().split('T')[0];
+      }
+
+      const eventObj = {
+        id: `holiday-${h._id}-${yr || 'single'}`,
+        title: `⛔ Blackout: ${h.name}`,
+        start,
+        allDay: true,
+        backgroundColor: '#e11d48',
+        borderColor: '#be123c',
+        textColor: '#ffffff',
+        is_holiday: true,
+        holiday_id: h._id,
+        holiday_name: h.name,
+        facility_name: h.facility_id?.name || 'All Facilities',
+        is_recurring: !!h.is_recurring,
+        description: h.description || '',
+      };
+
+      if (end) {
+        eventObj.end = end;
+      }
+
+      holidayEvents.push(eventObj);
+    });
+  });
+
+  return holidayEvents;
+};
+
 // Check date/court availability and return time slots based on chosen duration_hours
 export const checkAvailability = async (req, res) => {
   try {
@@ -104,18 +184,18 @@ export const checkAvailability = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot check availability for past dates.' });
     }
 
-    // Check Holiday
+    // Check Holiday Blackouts
     const holidays = await Holiday.find({
-      $or: [{ holiday_date: formattedDate }, { is_recurring: true }],
-      $and: [{ $or: [{ facility_id: null }, { facility_id }] }],
+      $or: [{ facility_id: null }, { facility_id: facility_id }],
     });
 
-    const activeHoliday = holidays.find((h) => h.holiday_date === formattedDate);
+    const activeHoliday = holidays.find((h) => checkHolidayBlackout(h, formattedDate));
     if (activeHoliday) {
       return res.json({
         success: false,
         is_closed: true,
-        message: `Facility is closed on this date due to holiday: ${activeHoliday.name}`,
+        message: `Facility is closed on this date due to holiday blackout: ${activeHoliday.name}`,
+        holiday_name: activeHoliday.name,
         slots: [],
       });
     }
@@ -241,6 +321,44 @@ export const createBooking = async (req, res) => {
     const formattedStartTime = formatTimeTo24h(start_time);
     const formattedEndTime = formatTimeTo24h(end_time);
 
+    // 1. Check Holiday Blackouts
+    const holidays = await Holiday.find({
+      $or: [{ facility_id: null }, { facility_id: facility_id }],
+    });
+    const activeHoliday = holidays.find((h) => checkHolidayBlackout(h, formattedDate));
+    if (activeHoliday) {
+      return res.status(400).json({
+        success: false,
+        message: `Facility is closed on ${formattedDate} due to holiday blackout: ${activeHoliday.name}.`,
+      });
+    }
+
+    // 2. Check Operating Hours for Day of Week
+    const bookingDateObj = new Date(formattedDate);
+    const dayOfWeek = bookingDateObj.getDay();
+    const operatingHour = await OperatingHour.findOne({ facility_id, day_of_week: dayOfWeek });
+    if (operatingHour && operatingHour.is_closed) {
+      return res.status(400).json({
+        success: false,
+        message: 'The facility is closed on this day of the week according to the operating schedule.',
+      });
+    }
+
+    // 3. Check within Operating Hours
+    const openTimeStr = operatingHour ? operatingHour.open_time : facility.open_time || '05:00';
+    const closeTimeStr = operatingHour ? operatingHour.close_time : facility.close_time || '23:00';
+    const openMins = timeToMinutes(openTimeStr);
+    const closeMins = timeToMinutes(closeTimeStr);
+    const newStartMins = timeToMinutes(formattedStartTime);
+    const newEndMins = timeToMinutes(formattedEndTime);
+
+    if (newStartMins < openMins || newEndMins > closeMins) {
+      return res.status(400).json({
+        success: false,
+        message: `Booking time (${formattedStartTime} - ${formattedEndTime}) is outside operating hours (${openTimeStr} - ${closeTimeStr}).`,
+      });
+    }
+
     // Double check availability against existing bookings
     const activeBookings = await Booking.find({
       court_id,
@@ -248,9 +366,6 @@ export const createBooking = async (req, res) => {
       status: { $in: ACTIVE_BOOKING_STATUSES },
       is_archived: { $ne: true },
     });
-
-    const newStartMins = timeToMinutes(formattedStartTime);
-    const newEndMins = timeToMinutes(formattedEndTime);
 
     const hasOverlap = activeBookings.some((b) => {
       const bStart = timeToMinutes(b.start_time);
@@ -408,6 +523,44 @@ export const createManualBookingAdmin = async (req, res) => {
     const formattedStartTime = formatTimeTo24h(start_time);
     const formattedEndTime = formatTimeTo24h(end_time);
 
+    // 1. Check Holiday Blackouts
+    const holidays = await Holiday.find({
+      $or: [{ facility_id: null }, { facility_id: facility_id }],
+    });
+    const activeHoliday = holidays.find((h) => checkHolidayBlackout(h, formattedDate));
+    if (activeHoliday) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot book: Facility is closed on ${formattedDate} due to holiday blackout: ${activeHoliday.name}.`,
+      });
+    }
+
+    // 2. Check Operating Hours for Day of Week
+    const bookingDateObj = new Date(formattedDate);
+    const dayOfWeek = bookingDateObj.getDay();
+    const operatingHour = await OperatingHour.findOne({ facility_id, day_of_week: dayOfWeek });
+    if (operatingHour && operatingHour.is_closed) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot book: The facility is closed on this day of the week according to the operating schedule.',
+      });
+    }
+
+    // 3. Check within Operating Hours
+    const openTimeStr = operatingHour ? operatingHour.open_time : facility.open_time || '05:00';
+    const closeTimeStr = operatingHour ? operatingHour.close_time : facility.close_time || '23:00';
+    const openMins = timeToMinutes(openTimeStr);
+    const closeMins = timeToMinutes(closeTimeStr);
+    const newStartMins = timeToMinutes(formattedStartTime);
+    const newEndMins = timeToMinutes(formattedEndTime);
+
+    if (newStartMins < openMins || newEndMins > closeMins) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot book: Time slot (${formattedStartTime} - ${formattedEndTime}) is outside operating hours (${openTimeStr} - ${closeTimeStr}).`,
+      });
+    }
+
     // Check overlap with existing active bookings
     const activeBookings = await Booking.find({
       court_id,
@@ -415,9 +568,6 @@ export const createManualBookingAdmin = async (req, res) => {
       status: { $in: ACTIVE_BOOKING_STATUSES },
       is_archived: { $ne: true },
     });
-
-    const newStartMins = timeToMinutes(formattedStartTime);
-    const newEndMins = timeToMinutes(formattedEndTime);
 
     const overlapBooking = activeBookings.find((b) => {
       const bStart = timeToMinutes(b.start_time);
@@ -799,7 +949,10 @@ export const getCalendarEventsAdmin = async (req, res) => {
       };
     });
 
-    return res.json({ success: true, events });
+    const holidays = await Holiday.find({}).populate('facility_id', 'name');
+    const holidayEvents = generateHolidayCalendarEvents(holidays);
+
+    return res.json({ success: true, events: [...events, ...holidayEvents], holidays });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -905,7 +1058,10 @@ export const getPublicCalendarEvents = async (req, res) => {
       };
     });
 
-    return res.json({ success: true, events });
+    const holidays = await Holiday.find({}).populate('facility_id', 'name');
+    const holidayEvents = generateHolidayCalendarEvents(holidays);
+
+    return res.json({ success: true, events: [...events, ...holidayEvents], holidays });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

@@ -26,31 +26,56 @@ export default function CalendarView() {
             completed: '#64748b',
           };
 
-          const mapped = res.data.events.map((e) => ({
-            id: e.id,
-            title: e.title,
-            start: e.start,
-            end: e.end,
-            backgroundColor: colorMap[e.status] || '#10b981',
-            borderColor: colorMap[e.status] || '#10b981',
-            textColor: '#ffffff',
-            extendedProps: {
-              status: e.status,
-              booking_code: e.booking_code,
-              customer_name: e.customer_name,
-              customer_email: e.customer_email,
-              customer_phone: e.customer_phone,
-              court_name: e.court_name,
-              facility_name: e.facility_name,
-              booking_date: e.booking_date,
-              start_time: e.start_time,
-              end_time: e.end_time,
-              payment_type: e.payment_type,
-              total_amount: e.total_amount,
-              paid_amount: e.paid_amount,
-              notes: e.notes,
-            },
-          }));
+          const mapped = res.data.events.map((e) => {
+            if (e.is_holiday) {
+              return {
+                id: e.id,
+                title: e.title || `⛔ Blackout: ${e.holiday_name}`,
+                start: e.start,
+                ...(e.end ? { end: e.end } : {}),
+                allDay: true,
+                backgroundColor: '#e11d48',
+                borderColor: '#be123c',
+                textColor: '#ffffff',
+                extendedProps: {
+                  is_holiday: true,
+                  holiday_name: e.holiday_name,
+                  facility_name: e.facility_name,
+                  is_recurring: e.is_recurring,
+                  description: e.description,
+                  start_date: e.start,
+                  end_date: e.end,
+                },
+              };
+            }
+
+            return {
+              id: e.id,
+              title: e.title,
+              start: e.start,
+              end: e.end,
+              backgroundColor: colorMap[e.status] || '#10b981',
+              borderColor: colorMap[e.status] || '#10b981',
+              textColor: '#ffffff',
+              extendedProps: {
+                is_holiday: false,
+                status: e.status,
+                booking_code: e.booking_code,
+                customer_name: e.customer_name,
+                customer_email: e.customer_email,
+                customer_phone: e.customer_phone,
+                court_name: e.court_name,
+                facility_name: e.facility_name,
+                booking_date: e.booking_date,
+                start_time: e.start_time,
+                end_time: e.end_time,
+                payment_type: e.payment_type,
+                total_amount: e.total_amount,
+                paid_amount: e.paid_amount,
+                notes: e.notes,
+              },
+            };
+          });
 
           setEvents(mapped);
         }
@@ -110,6 +135,7 @@ export default function CalendarView() {
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500"></span> Pending Approval</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-indigo-500"></span> Checked In</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-500"></span> Completed</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-rose-600"></span> Holiday Blackout (Closed)</span>
       </div>
 
       <div className="glass-card p-3 sm:p-6 rounded-3xl space-y-4 overflow-x-auto">
@@ -147,7 +173,8 @@ export default function CalendarView() {
                 };
                 return `${formatHour(startHour)}-${formatHour(endHour)}`;
               }}
-              allDaySlot={false}
+              allDaySlot={true}
+              allDayText="All-Day"
               height="auto"
               contentHeight="auto"
               eventClick={(info) => {
@@ -169,75 +196,136 @@ export default function CalendarView() {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  {selectedEvent.booking_code || 'RESERVATION'}
-                </span>
-                <StatusBadge status={selectedEvent.status} />
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2 pt-1">
-                <User className="w-5 h-5 text-emerald-600" />
-                {selectedEvent.customer_name}
-              </h3>
-            </div>
-
-            <div className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
-              <div className="flex items-center gap-2 text-slate-700 font-medium">
-                <Clock className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>
-                  <strong>Date & Time:</strong> {selectedEvent.booking_date} • {selectedEvent.start_time} - {selectedEvent.end_time}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-slate-700 font-medium">
-                <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
-                <span>
-                  <strong>Court:</strong> {selectedEvent.court_name} {selectedEvent.facility_name ? `(${selectedEvent.facility_name})` : ''}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-slate-700 font-medium">
-                <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>
-                  <strong>Phone:</strong> {selectedEvent.customer_phone}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-slate-700 font-medium">
-                <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>
-                  <strong>Email:</strong> {selectedEvent.customer_email}
-                </span>
-              </div>
-
-              {selectedEvent.total_amount !== undefined && (
-                <div className="flex items-center gap-2 text-slate-700 font-medium">
-                  <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>
-                    <strong>Payment Amount:</strong> ₱{selectedEvent.total_amount?.toFixed(2)}
-                  </span>
+            {selectedEvent.is_holiday ? (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-black uppercase tracking-wider">
+                    ⛔ Holiday Blackout
+                  </div>
+                  <h3 className="text-xl font-extrabold text-slate-900 pt-1">
+                    {selectedEvent.holiday_name}
+                  </h3>
                 </div>
-              )}
 
-              {selectedEvent.notes && (
-                <div className="flex items-start gap-2 text-slate-700 font-medium pt-1">
-                  <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Notes:</strong> {selectedEvent.notes}
-                  </span>
+                <div className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <Clock className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>
+                      <strong>Blackout Date:</strong> {selectedEvent.start_date}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>
+                      <strong>Facility Scope:</strong> {selectedEvent.facility_name}
+                    </span>
+                  </div>
+
+                  {selectedEvent.is_recurring && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold">
+                      🔄 <strong>Annual Recurring Holiday:</strong> Automatically blocks bookings on this date every year.
+                    </div>
+                  )}
+
+                  {selectedEvent.description && (
+                    <div className="flex items-start gap-2 text-slate-700 font-medium pt-1">
+                      <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Notes:</strong> {selectedEvent.description}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setSelectedEvent(null)}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs cursor-pointer transition-colors"
-              >
-                Close
-              </button>
-            </div>
+                <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+                  <a
+                    href="/admin/schedules"
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1"
+                  >
+                    Configure in Schedules & Blackouts →
+                  </a>
+                  <button
+                    onClick={() => setSelectedEvent(null)}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs cursor-pointer transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      {selectedEvent.booking_code || 'RESERVATION'}
+                    </span>
+                    <StatusBadge status={selectedEvent.status} />
+                  </div>
+                  <h3 className="text-xl font-extrabold text-slate-900 flex items-center gap-2 pt-1">
+                    <User className="w-5 h-5 text-emerald-600" />
+                    {selectedEvent.customer_name}
+                  </h3>
+                </div>
+
+                <div className="space-y-2.5 pt-2 border-t border-slate-100 text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>
+                      <strong>Date & Time:</strong> {selectedEvent.booking_date} • {selectedEvent.start_time} - {selectedEvent.end_time}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span>
+                      <strong>Court:</strong> {selectedEvent.court_name} {selectedEvent.facility_name ? `(${selectedEvent.facility_name})` : ''}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      <strong>Phone:</strong> {selectedEvent.customer_phone}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>
+                      <strong>Email:</strong> {selectedEvent.customer_email}
+                    </span>
+                  </div>
+
+                  {selectedEvent.total_amount !== undefined && (
+                    <div className="flex items-center gap-2 text-slate-700 font-medium">
+                      <CreditCard className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        <strong>Payment Amount:</strong> ₱{selectedEvent.total_amount?.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedEvent.notes && (
+                    <div className="flex items-start gap-2 text-slate-700 font-medium pt-1">
+                      <FileText className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Notes:</strong> {selectedEvent.notes}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-slate-100">
+                  <button
+                    onClick={() => setSelectedEvent(null)}
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs cursor-pointer transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
